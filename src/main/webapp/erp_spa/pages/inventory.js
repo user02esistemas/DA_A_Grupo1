@@ -1,5 +1,6 @@
 ﻿async function renderInventario(c) {
     const prods = await api.getProducts();
+    state.caches.products = prods;
     const rows = prods.map(p => `
         <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0">
             <td class="p-4 whitespace-nowrap">
@@ -77,7 +78,19 @@
 }
 
 window.openProductModal = (id = null) => {
-    const p = id ? state.caches.products.find(x => x.id === id) : { code: '', barcode: '', name: '', category: '', unit: '', price: 0, priceMayorista: 0, priceDistribuidor: 0, stock: 0, minStock: 0, manejaLote: false, procesoSoldadura: '', amperaje: '', materialBase: '', image: '', requiresCert: false };
+    // Si hay un ID, buscamos el producto. Si no, creamos un objeto vacío.
+    const p = id ? state.caches.products.find(x => x.id === id) : { 
+        code: '', barcode: '', name: '', category: '', unit: '', 
+        price: 0, priceMayorista: 0, priceDistribuidor: 0, 
+        stock: 0, minStock: 0, manejaLote: false, 
+        procesoSoldadura: '', amperaje: '', materialBase: '', 
+        image: '', requiresCert: false 
+    };
+    
+    if (id && !p) {
+        return Swal.fire('Error', 'No se encontró el producto en la caché.', 'error');
+    }
+
     const isNew = !id;
     
     showModal(`
@@ -90,34 +103,33 @@ window.openProductModal = (id = null) => {
             <form id="prod-form" class="space-y-4">
                 <input type="hidden" id="p-id" value="${id || ''}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Columna Izquierda: Info Gral -->
                     <div class="space-y-4">
                         <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                             <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5"><i class="bi bi-info-circle-fill"></i> Datos Principales</h4>
                             
                             <div>
                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre del Producto</label>
-                                <input type="text" id="p-name" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2" value="${p.name}" required>
+                                <input type="text" id="p-name" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.name}" required>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Código Único</label>
-                                    <input type="text" id="p-code" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 font-mono" value="${p.code}" required>
+                                    <input type="text" id="p-code" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3 font-mono" value="${p.code}" required>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Código de Barras</label>
-                                    <input type="text" id="p-barcode" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2" value="${p.barcode||''}">
+                                    <input type="text" id="p-barcode" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.barcode||''}">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Categoría</label>
-                                    <input type="text" id="p-cat" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2" value="${p.category}" list="cat-list" autocomplete="off" required>
+                                    <input type="text" id="p-cat" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.category}" list="cat-list" autocomplete="off" required>
                                     <datalist id="cat-list">${MOCK_DB.categories.map(c => `<option value="${c}">${c}</option>`).join('')}</datalist>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Unidad de Medida</label>
-                                    <input type="text" id="p-unit" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2" value="${p.unit}" list="unit-list" autocomplete="off" required>
+                                    <input type="text" id="p-unit" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.unit}" list="unit-list" autocomplete="off" required>
                                     <datalist id="unit-list">${MOCK_DB.units.map(u => `<option value="${u}">${u}</option>`).join('')}</datalist>
                                 </div>
                             </div>
@@ -128,43 +140,41 @@ window.openProductModal = (id = null) => {
                             <div class="grid grid-cols-3 gap-2">
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Minorista</label>
-                                    <input type="number" step="0.01" id="p-price" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5" value="${p.price}" required>
+                                    <input type="number" step="0.01" id="p-price" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.price}" required>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Mayorista</label>
-                                    <input type="number" step="0.01" id="p-price-may" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5" value="${p.priceMayorista || p.price}" required>
+                                    <input type="number" step="0.01" id="p-price-may" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.priceMayorista || p.price}" required>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Distribuidor</label>
-                                    <input type="number" step="0.01" id="p-price-dist" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5" value="${p.priceDistribuidor || p.price}" required>
+                                    <input type="number" step="0.01" id="p-price-dist" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.priceDistribuidor || p.price}" required>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Mínimo</label>
-                                    <input type="number" id="p-min" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2" value="${p.minStock}" required>
+                                    <input type="number" id="p-min" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.minStock}" required>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Inicial</label>
-                                    <input type="number" id="p-stock" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 disabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400" value="${isNew ? '' : p.stock}" ${p.manejaLote ? 'disabled' : 'required'}>
-                                    <small id="stock-lote-msg" class="${p.manejaLote ? '' : 'hidden'} text-[10px] text-slate-500 mt-1 block">Gestionado por lotes</small>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Actual</label>
+                                    <input type="number" id="p-stock" class="w-full rounded-xl border-slate-200 bg-white py-2 px-3 disabled:bg-slate-100 disabled:text-slate-500" value="${p.stock}" ${!isNew ? 'disabled' : ''} ${isNew && p.manejaLote ? 'disabled' : ''}>
+                                    <small id="stock-lote-msg" class="${isNew && p.manejaLote ? '' : 'hidden'} text-[10px] text-slate-500 mt-1 block">Gestionado por lotes/compras</small>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Columna Derecha: Imagen e Industrial/Lotes -->
                     <div class="space-y-4">
                         <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
                             <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5"><i class="bi bi-image-fill"></i> Imagen del Producto</h4>
-                            <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:bg-slate-100/50 transition-colors cursor-pointer relative" id="img-drop-zone">
+                            <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:bg-slate-100/50 transition-colors cursor-pointer relative overflow-hidden" id="img-drop-zone" style="min-height: 120px;">
                                 <input type="file" id="p-img-file" accept="image/jpeg, image/png" style="display:none">
-                                <div class="space-y-1" id="img-dz-content">
+                                <div class="space-y-1 relative z-10" id="img-dz-content">
                                     <i class="bi bi-cloud-arrow-up text-3xl text-slate-400"></i>
-                                    <p class="text-xs text-slate-600">Arrastra la imagen o haz clic para subir</p>
-                                    <p class="text-[10px] text-slate-400">(JPG, PNG)</p>
+                                    <p class="text-xs text-slate-600">Clic para cambiar imagen</p>
                                 </div>
-                                <img class="absolute inset-0 w-full h-full object-cover rounded-2xl ${p.image ? '' : 'hidden'}" id="img-preview" src="${p.image||''}">
+                                <img class="absolute inset-0 w-full h-full object-contain bg-white rounded-2xl ${p.image ? '' : 'hidden'}" id="img-preview" src="${p.image||''}">
                                 <input type="hidden" id="p-img-data" value="${p.image||''}">
                             </div>
                         </div>
@@ -175,59 +185,31 @@ window.openProductModal = (id = null) => {
                             <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-150">
                                 <span class="text-xs font-semibold text-slate-700">Maneja Lote</span>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="p-lote" onchange="toggleLoteSection(); toggleStockPorLote()" class="sr-only peer" ${p.manejaLote ? 'checked' : ''} ${!isNew ? 'disabled' : ''}>
+                                    <input type="checkbox" id="p-lote" onchange="toggleLoteSection(); toggleStockPorLote()" class="sr-only peer" ${p.manejaLote ? 'checked' : ''}>
                                     <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
                             </div>
                             
                             <div id="lote-section" class="${p.manejaLote ? '' : 'hidden'} p-3 rounded-xl bg-blue-50 border border-blue-150 space-y-2">
-                                ${isNew ? `
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-[10px] text-slate-600 mb-0.5">N° Lote Inicial</label>
-                                            <input type="text" id="l-num" class="w-full rounded-lg border-slate-200 bg-white py-1 text-xs font-mono">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] text-slate-600 mb-0.5">Fecha Entrada</label>
-                                            <input type="date" id="l-date" class="w-full rounded-lg border-slate-200 bg-white py-1 text-xs">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-slate-600 mb-0.5">Stock del Lote</label>
-                                        <input type="number" id="l-stock" class="w-full rounded-lg border-slate-200 bg-white py-1 text-xs">
-                                    </div>
-                                ` : '<p class="text-xs text-slate-500">Mapeo de trazabilidad activo. Entradas posteriores vía módulo de Lotes.</p>'}
+                                <p class="text-[11px] text-slate-600 font-medium">
+                                    <i class="bi bi-info-circle-fill text-blue-500 mr-1"></i>
+                                    Este producto requiere trazabilidad. Los lotes se gestionarán en Compras o en el Módulo de Lotes.
+                                </p>
                             </div>
 
                             <div class="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-150">
                                 <span class="text-xs font-semibold text-slate-700">Requiere Certificado</span>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="p-cert" onchange="toggleCertSection()" class="sr-only peer" ${p.requiresCert ? 'checked' : ''}>
-                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                                 </label>
                             </div>
                             
                             <div id="cert-section" class="${p.requiresCert ? '' : 'hidden'} p-3 rounded-xl bg-amber-50 border border-amber-150 space-y-2">
-                                ${isNew ? `
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-[10px] text-slate-600 mb-0.5">N° Certificado</label>
-                                            <input type="text" id="c-num" class="w-full rounded-lg border-slate-200 bg-white py-1 text-xs">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] text-slate-600 mb-0.5">Fecha Emisión</label>
-                                            <input type="date" id="c-date" class="w-full rounded-lg border-slate-200 bg-white py-1 text-xs">
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-slate-600 mb-0.5">Archivo Certificado</label>
-                                        <div class="border border-dashed border-slate-300 rounded-lg p-2 text-center bg-white cursor-pointer" id="pdf-drop-zone">
-                                            <input type="file" id="p-pdf-file" accept="application/pdf" style="display:none">
-                                            <span id="pdf-file-name" class="text-[10px] text-slate-500 flex items-center justify-center gap-1"><i class="bi bi-file-pdf-fill text-red-500"></i> Subir PDF</span>
-                                        </div>
-                                        <input type="hidden" id="p-pdf-data" value="">
-                                    </div>
-                                ` : '<p class="text-xs text-slate-500">Los lotes individuales manejan la carga del certificado.</p>'}
+                                <p class="text-[11px] text-slate-600 font-medium">
+                                    <i class="bi bi-shield-check text-amber-600 mr-1"></i>
+                                    Se exigirá documento PDF del certificado al ingresar mercadería.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -236,7 +218,7 @@ window.openProductModal = (id = null) => {
                 <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
                     <button type="button" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-1.5">
-                        <i class="bi bi-save"></i> Guardar Producto
+                        <i class="bi bi-save"></i> ${isNew ? 'Guardar Producto' : 'Actualizar Cambios'}
                     </button>
                 </div>
             </form>
@@ -325,7 +307,7 @@ window.openProductModal = (id = null) => {
         pdfData.value = file.name;
     }
 
-    document.getElementById('prod-form').addEventListener('submit', async ev => {
+document.getElementById('prod-form').addEventListener('submit', async ev => {
         ev.preventDefault();
         const pid = document.getElementById('p-id').value;
         const isNewP = !pid;
@@ -336,11 +318,18 @@ window.openProductModal = (id = null) => {
         if (!isNewP && !manejaLote) initialStock = parseInt(document.getElementById('p-stock').value) || 0;
         if (!isNewP && manejaLote) initialStock = p.stock;
         
+        // --- CAMBIO 1: VALIDACIÓN INTELIGENTE ---
         if (isNewP && manejaLote) {
             initialStock = parseInt(document.getElementById('l-stock')?.value) || 0;
-            if(!document.getElementById('l-num').value) return Swal.fire('Error', "Debe ingresar un número de lote inicial.", 'error');
-            if(reqCert && !document.getElementById('c-num').value) return Swal.fire('Error', "Debe ingresar el número de certificado.", 'error');
+            
+            // Solo exigimos N° de lote si el usuario está ingresando stock inicial.
+            // Si el stock es 0 (porque va a ingresar luego por Compras), lo dejamos pasar.
+            if (initialStock > 0) {
+                if(!document.getElementById('l-num').value) return Swal.fire('Error', "Debe ingresar un número de lote inicial si el stock es mayor a cero.", 'error');
+                if(reqCert && !document.getElementById('c-num').value) return Swal.fire('Error', "Debe ingresar el número de certificado.", 'error');
+            }
         }
+        
         if (isNewP && !manejaLote) {
             initialStock = parseInt(document.getElementById('p-stock').value) || 0; 
         }
@@ -357,9 +346,9 @@ window.openProductModal = (id = null) => {
             category: catVal || 'General',
             unit: unitVal || 'Unidad',
             price: basePrice,
-            priceMayorista: parseFloat(document.getElementById('p-price-may').value) || basePrice,
-            priceDistribuidor: parseFloat(document.getElementById('p-price-dist').value) || basePrice,
-            stock: initialStock,
+            precioMayorista: parseFloat(document.getElementById('p-price-may').value) || basePrice,
+            precioDistribuidor: parseFloat(document.getElementById('p-price-dist').value) || basePrice,
+            stock: initialStock, // Entrará con 0
             minStock: parseInt(document.getElementById('p-min').value),
             manejaLote: manejaLote,
             requiresCert: reqCert,
@@ -374,7 +363,9 @@ window.openProductModal = (id = null) => {
         
         const savedProd = await api.saveProduct(prod);
 
-        if (isNewP && manejaLote) {
+        // --- CAMBIO 2: GUARDADO DEL LOTE ---
+        // Solo creamos el lote en la base de datos si el stock inicial es mayor a 0
+        if (isNewP && manejaLote && initialStock > 0) {
             const newLote = {
                 id: Date.now(),
                 productId: savedProd.id,
@@ -385,7 +376,7 @@ window.openProductModal = (id = null) => {
                 certificateName: document.getElementById('p-pdf-data').value || 'Certificado.pdf'
             };
             MOCK_DB.lotes.push(newLote);
-            // Save state updates
+            // Guardar actualizaciones de estado
             localStorage.setItem('DELGADO_ERP_MOCK_DB', JSON.stringify(MOCK_DB));
         }
 

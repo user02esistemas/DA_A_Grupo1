@@ -330,10 +330,26 @@ const api = {
             if (oc) oc.status = 'APROBADA';
         }
 
+        // Iteramos los productos comprados
         purchase.items.forEach(item => {
             const prod = MOCK_DB.products.find(p => p.id === item.productId);
             if (prod) {
+                // Aumentamos el stock general
                 prod.stock += item.quantity;
+                
+                // MAGIA: Si el item tiene un lote escrito, lo insertamos en la BD de Lotes
+                if (item.loteNumber) {
+                    MOCK_DB.lotes.push({
+                        id: Date.now() + Math.random(),
+                        productId: prod.id,
+                        loteNumber: item.loteNumber,
+                        dateIn: purchase.date, // Se registra con la fecha de la factura
+                        stock: item.quantity,
+                        hasCert: false
+                    });
+                }
+
+                // Generamos el movimiento de Kardex
                 MOCK_DB.inventoryMovements.push({
                     id: Date.now() + Math.random(),
                     date: purchase.date,
@@ -347,6 +363,7 @@ const api = {
         saveDB();
         return purchase;
     },
+
 
     async getPurchaseOrders() {
         await delay(50);

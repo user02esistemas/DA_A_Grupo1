@@ -6,9 +6,9 @@
     const orders = await api.getPurchaseOrders();
 
     const provHtml = providers.map(p => `<option value="${p.id}">${p.docType} ${p.document} - ${p.name}</option>`).join('');
-    const prodHtml = prods.map(p => `<option value="${p.id}" data-price="${p.price}">${p.name}</option>`).join('');
+    const prodHtml = prods.map(p => `<option value="${p.id}" data-price="${p.price}" data-lote="${p.manejaLote}">${p.code} - ${p.name}</option>`).join('');
     
-    window.comprasContext = { provHtml, prodHtml }; // Save for modal
+    window.comprasContext = { provHtml, prodHtml }; 
 
     const pendingOrders = orders.filter(o => o.status === 'PENDIENTE');
     const ocOpts = pendingOrders.map(o => `<option value="${o.id}">${o.correlative} - ${providers.find(p=>p.id===o.providerId)?.name}</option>`).join('');
@@ -51,7 +51,7 @@
         <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4" data-aos="fade-down">
             <div>
                 <h2 class="text-2xl font-bold text-[#F8FAFC] tracking-tight">Gestión de Compras y Abastecimiento</h2>
-                <p class="text-sm text-[#CBD5E1] mt-1">Registra facturas reales de compra o genera cotizaciones/órdenes de compra (OC) para proveedores.</p>
+                <p class="text-sm text-[#CBD5E1] mt-1">Registra facturas reales de compra o genera cotizaciones/órdenes de compra (OC).</p>
             </div>
             <button class="bg-[#1E293B] border border-[#334155] hover:bg-[#334155] text-[#F8FAFC] px-4 py-2 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-2" onclick="openOCModal()">
                 <i class="bi bi-file-earmark-plus"></i> Generar Orden de Compra (OC)
@@ -91,27 +91,34 @@
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-[#CBD5E1] mb-1">Moneda</label>
-                            <select class="w-full rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all py-2.5 outline-none" required>
-                                <option>Soles (PEN)</option>
-                                <option>Dólares (USD)</option>
+                            <select id="c-moneda" class="w-full rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all py-2.5 outline-none" required>
+                                <option value="PEN">Soles (PEN)</option>
+                                <option value="USD">Dólares (USD)</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="p-4 rounded-xl bg-[#111827] border border-[#334155]">
                         <h4 class="text-sm font-bold text-[#F8FAFC] mb-3 uppercase tracking-wider text-slate-400">Agregar Producto</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-semibold text-[#CBD5E1] mb-1">Producto</label>
                                 <select id="c-prod" class="w-full rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all py-2.5 outline-none">
                                     ${prodHtml}
                                 </select>
                             </div>
-                            <div>
+                            
+                            <div id="c-lote-container" class="hidden md:col-span-1">
+                                <label class="block text-sm font-bold text-emerald-400 mb-1"><i class="bi bi-layers"></i> N° Lote</label>
+                                <input type="text" id="c-lote" class="w-full rounded-xl border-emerald-500/50 bg-[#1F2937] text-[#F8FAFC] focus:border-emerald-500 py-2.5 outline-none font-mono text-sm shadow-[0_0_10px_rgba(16,185,129,0.2)]" placeholder="Lote...">
+                            </div>
+
+                            <div class="md:col-span-1">
                                 <label class="block text-sm font-semibold text-[#CBD5E1] mb-1">Cant. Real</label>
                                 <input type="number" id="c-cant" class="w-full rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all py-2.5 outline-none" value="1" min="1">
                             </div>
-                            <div>
+                            
+                            <div class="md:col-span-2">
                                 <label class="block text-sm font-semibold text-[#CBD5E1] mb-1">Costo U. Real</label>
                                 <div class="flex gap-2">
                                     <input type="number" id="c-cost" class="w-full rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all py-2.5 outline-none" step="0.01">
@@ -123,14 +130,13 @@
                         </div>
                     </div>
 
-                    <!-- Tabla temporal -->
                     <div class="overflow-x-auto rounded-xl border border-[#334155]">
                         <table class="w-full text-left border-collapse" id="c-table">
                             <thead>
                                 <tr class="bg-[#111827] border-b border-[#334155]">
-                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Producto</th>
-                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Cantidad Real</th>
-                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Costo Unitario</th>
+                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Producto / Lote</th>
+                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Cant</th>
+                                    <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Costo U.</th>
                                     <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider">Subtotal</th>
                                     <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase tracking-wider text-right">Acción</th>
                                 </tr>
@@ -142,7 +148,7 @@
 
                     <div class="flex justify-between items-center border-t border-[#334155] pt-4 mt-6">
                         <div>
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total de Compra</span>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Total de Compra (Soles)</span>
                             <span class="text-2xl font-black text-emerald-400" id="c-total">S/ 0.00</span>
                         </div>
                         <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-[#F8FAFC] font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-600/20 flex items-center gap-2">
@@ -154,13 +160,9 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" data-aos="fade-up">
-            <!-- OC Tab -->
             <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden">
                 <div class="p-4 border-b border-[#334155] bg-[#111827] flex justify-between items-center">
-                    <h3 class="font-bold text-[#F8FAFC]">Historial de Órdenes de Compra</h3>
-                    <button class="bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs text-[#CBD5E1] px-2.5 py-1.5 rounded-lg transition-colors" onclick="api.getPurchaseOrders().then(d => exportToCSV(d, 'ordenes_compra.csv'))">
-                        <i class="bi bi-download"></i> Exportar
-                    </button>
+                    <h3 class="font-bold text-[#F8FAFC]">Historial Órdenes de Compra</h3>
                 </div>
                 <div class="overflow-x-auto max-h-[300px] custom-scrollbar">
                     <table class="w-full text-left border-collapse">
@@ -168,8 +170,8 @@
                             <tr class="bg-[#111827]/50 border-b border-[#334155]">
                                 <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">OC N°</th>
                                 <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Proveedor</th>
-                                <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Fecha Est.</th>
-                                <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Total Est.</th>
+                                <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Fecha</th>
+                                <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Total</th>
                                 <th class="p-3 text-xs font-bold text-[#CBD5E1] uppercase">Estado</th>
                             </tr>
                         </thead>
@@ -180,13 +182,9 @@
                 </div>
             </div>
 
-            <!-- Compras Tab -->
             <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden">
                 <div class="p-4 border-b border-[#334155] bg-[#111827] flex justify-between items-center">
-                    <h3 class="font-bold text-[#F8FAFC]">Historial de Compras Reales</h3>
-                    <button class="bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs text-[#CBD5E1] px-2.5 py-1.5 rounded-lg transition-colors" onclick="api.getPurchases().then(d => exportToCSV(d, 'compras.csv'))">
-                        <i class="bi bi-download"></i> Exportar
-                    </button>
+                    <h3 class="font-bold text-[#F8FAFC]">Historial Compras Reales</h3>
                 </div>
                 <div class="overflow-x-auto max-h-[300px] custom-scrollbar">
                     <table class="w-full text-left border-collapse">
@@ -208,8 +206,11 @@
         </div>
     `;
 
-    // Compra Real Logic
+    // ---------------------------------------------------------
+    // LÓGICA DE COMPRA (Validación de Lotes y Monedas Integrada)
+    // ---------------------------------------------------------
     window.tempCompraItems = [];
+    
     window.linkOC = () => {
         const ocId = document.getElementById('c-order-link').value;
         if(!ocId) return;
@@ -217,31 +218,80 @@
         if(!oc) return;
         
         document.getElementById('c-prov').value = oc.providerId;
-        window.tempCompraItems = oc.items.map(i => ({...i}));
+        
+        // Mapeamos los items y buscamos si requieren lote para pintar las cajitas rojas
+        window.tempCompraItems = oc.items.map(i => {
+            const prodInfo = prods.find(p => p.id === i.productId);
+            return {
+                ...i,
+                manejaLote: prodInfo ? prodInfo.manejaLote : false,
+                loteNumber: null // Aún no sabemos el lote
+            };
+        });
         renderCompraTable();
     };
 
     const cProdSelect = document.getElementById('c-prod');
+    const cLoteContainer = document.getElementById('c-lote-container');
+    const cLoteInput = document.getElementById('c-lote');
+    const cCostInput = document.getElementById('c-cost');
+
     if (cProdSelect) {
         cProdSelect.addEventListener('change', e => {
             const opt = e.target.options[e.target.selectedIndex];
-            document.getElementById('c-cost').value = (opt.getAttribute('data-price') * 0.7).toFixed(2);
+            cCostInput.value = (opt.getAttribute('data-price') * 0.7).toFixed(2);
+            
+            if(opt.getAttribute('data-lote') === 'true') {
+                cLoteContainer.classList.remove('hidden');
+            } else {
+                cLoteContainer.classList.add('hidden');
+                cLoteInput.value = '';
+            }
         });
-        // trigger initial cost
-        if (cProdSelect.options[0]) {
-            document.getElementById('c-cost').value = (cProdSelect.options[0].getAttribute('data-price') * 0.7).toFixed(2);
-        }
+        
+        if (cProdSelect.options[0]) cProdSelect.dispatchEvent(new Event('change'));
     }
 
     window.addCompraItem = () => {
         const pSel = document.getElementById('c-prod');
+        const opt = pSel.options[pSel.selectedIndex];
         const pId = pSel.value;
-        const name = pSel.options[pSel.selectedIndex].text;
+        const name = opt.text;
         const cant = parseInt(document.getElementById('c-cant').value);
-        const cost = parseFloat(document.getElementById('c-cost').value);
-        if(!pId || cant<=0 || cost<=0) return;
+        let cost = parseFloat(cCostInput.value); 
         
-        window.tempCompraItems.push({ productId: parseInt(pId), quantity: cant, cost: cost, name });
+        const manejaLote = opt.getAttribute('data-lote') === 'true';
+        const loteNum = document.getElementById('c-lote').value.trim();
+        
+        const esDolares = document.getElementById('c-moneda').value === 'USD';
+
+        if(!pId || cant<=0 || isNaN(cost) || cost<=0) {
+            return Swal.fire('Error', 'Por favor ingrese una cantidad y un costo unitario válido.', 'error');
+        }
+        
+        if(manejaLote && !loteNum) {
+            return Swal.fire('Atención', 'Este producto requiere registrar un Número de Lote para ingresar al almacén.', 'warning');
+        }
+
+        let costInSoles = cost;
+        let etiquetaMoneda = 'S/';
+        if (esDolares) {
+            costInSoles = cost * state.exchangeRate; 
+            etiquetaMoneda = '$';
+        }
+        
+        window.tempCompraItems.push({ 
+            productId: parseInt(pId), 
+            quantity: cant, 
+            cost: costInSoles, 
+            costoOriginal: cost, 
+            monedaOriginal: etiquetaMoneda,
+            name: name,
+            manejaLote: manejaLote,
+            loteNumber: manejaLote ? loteNum : null 
+        });
+        
+        document.getElementById('c-lote').value = ''; 
         renderCompraTable();
     };
 
@@ -253,17 +303,23 @@
     window.renderCompraTable = () => {
         document.querySelector('#c-table tbody').innerHTML = window.tempCompraItems.map((i, idx) => `
             <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0">
-                <td class="p-3 text-[#F8FAFC]">${i.name||i.productId}</td>
+                <td class="p-3 text-[#F8FAFC]">
+                    ${i.name}
+                    ${i.manejaLote && !i.loteNumber 
+                        ? `<br><input type="text" placeholder="Escriba Lote..." class="mt-1 w-full max-w-[150px] text-[10px] font-mono rounded bg-red-500/10 border border-red-500/50 text-red-400 px-2 py-1 outline-none focus:border-red-400" onchange="window.tempCompraItems[${idx}].loteNumber = this.value; window.renderCompraTable();">` 
+                        : (i.loteNumber ? `<br><span class="inline-block mt-1 text-[10px] font-bold text-emerald-900 bg-emerald-400 px-1.5 py-0.5 rounded">LOTE: ${i.loteNumber}</span>` : '')}
+                </td>
                 <td class="p-3 text-[#CBD5E1]">${i.quantity}</td>
-                <td class="p-3 text-[#CBD5E1]">${formatMoney(i.cost)}</td>
-                <td class="p-3 text-[#F8FAFC] font-semibold">${formatMoney((i.quantity*i.cost))}</td>
+                <td class="p-3 text-[#CBD5E1]">${i.monedaOriginal || 'S/'} ${(i.costoOriginal || i.cost).toFixed(2)}</td>
+                <td class="p-3 text-[#F8FAFC] font-semibold">${formatMoney((i.quantity * i.cost))}</td>
                 <td class="p-3 text-right">
-                    <button type="button" class="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-all" onclick="removeCompraItem(${idx})">
+                    <button type="button" class="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition-all" onclick="removeCompraItem(${idx})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>
         `).join('');
+        
         const total = window.tempCompraItems.reduce((s,i)=>s+(i.quantity*i.cost),0);
         document.getElementById('c-total').textContent = formatMoney(total);
     };
@@ -271,6 +327,13 @@
     document.getElementById('compra-form').addEventListener('submit', async e => {
         e.preventDefault();
         if(window.tempCompraItems.length===0) return Swal.fire('Error', 'La tabla de compra está vacía.', 'error');
+        
+        // Bloqueamos el Guardado si el usuario dejó lotes vacíos en la tabla (ej. por vincular una OC)
+        const faltanLotes = window.tempCompraItems.some(i => i.manejaLote && !i.loteNumber);
+        if (faltanLotes) {
+            return Swal.fire('Error', 'Falta ingresar el número de Lote en algunos productos de la tabla. Por favor revise las cajas rojas.', 'error');
+        }
+
         await api.savePurchase({
             orderId: parseInt(document.getElementById('c-order-link').value) || null,
             providerId: parseInt(document.getElementById('c-prov').value),
@@ -279,16 +342,17 @@
             total: window.tempCompraItems.reduce((s,i)=>s+(i.quantity*i.cost),0),
             items: window.tempCompraItems
         });
+        
         await Swal.fire({
             icon: 'success',
             title: 'Compra registrada',
-            text: 'El stock ha sido incrementado en el almacén.',
-            confirmButtonColor: '#3b82f6'
+            text: 'El stock y los lotes han sido ingresados al almacén correctamente.',
+            confirmButtonColor: '#10B981',
+            customClass: { popup: 'rounded-2xl bg-[#1E293B] text-[#F8FAFC] border border-[#334155]' }
         });
         navigate('purchases');
     });
 }
-
 window.openOCModal = () => {
     window.tempOCItems = [];
     showModal(`
@@ -303,7 +367,7 @@ window.openOCModal = () => {
             </p>
             
             <form id="oc-form" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Proveedor</label>
                         <select id="oc-prov" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" required>
@@ -315,21 +379,32 @@ window.openOCModal = () => {
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Fecha Estimada</label>
                         <input type="date" id="oc-date" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" required value="${new Date().toISOString().split('T')[0]}">
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Moneda de Cotización</label>
+                        <select id="oc-moneda" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" required>
+                            <option value="PEN">Soles (PEN)</option>
+                            <option value="USD">Dólares (USD)</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
                     <h4 class="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Añadir Producto a Cotizar</h4>
-                    <div class="grid grid-cols-3 gap-3 items-end">
-                        <div class="col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                        <div class="md:col-span-3">
                             <label class="block text-xs text-slate-500 mb-1">Producto</label>
-                            <select id="oc-prod" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2.5">
+                            <select id="oc-prod" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2.5" onchange="document.getElementById('oc-cost').value = (this.options[this.selectedIndex].getAttribute('data-price') * 0.7).toFixed(2)">
                                 ${window.comprasContext.prodHtml}
                             </select>
                         </div>
-                        <div>
+                        <div class="md:col-span-1">
                             <label class="block text-xs text-slate-500 mb-1">Cant.</label>
+                            <input type="number" id="oc-cant" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2.5" value="1" min="1">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs text-slate-500 mb-1">Costo Est.</label>
                             <div class="flex gap-2">
-                                <input type="number" id="oc-cant" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2.5" value="1" min="1">
+                                <input type="number" id="oc-cost" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2.5" step="0.01">
                                 <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl transition-all font-bold" onclick="addOCItem()">
                                     <i class="bi bi-plus-lg"></i>
                                 </button>
@@ -344,19 +419,19 @@ window.openOCModal = () => {
                             <tr class="bg-slate-50 border-b border-slate-150">
                                 <th class="p-2.5 font-bold text-slate-600">Producto a Cotizar</th>
                                 <th class="p-2.5 font-bold text-slate-600">Cant</th>
-                                <th class="p-2.5 font-bold text-slate-600">Sub. Est</th>
+                                <th class="p-2.5 font-bold text-slate-600">Costo Est.</th>
+                                <th class="p-2.5 font-bold text-slate-600">Subtotal</th>
                                 <th class="p-2.5 font-bold text-slate-600 text-right">Acción</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
-                            <!-- Items added here -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
                 
                 <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                     <div>
-                        <span class="text-xs text-slate-500 uppercase tracking-wide block">Total Estimado</span>
+                        <span class="text-xs text-slate-500 uppercase tracking-wide block">Total Estimado (Soles)</span>
                         <span class="text-2xl font-bold text-slate-800" id="oc-total">S/ 0.00</span>
                     </div>
                     <div class="flex gap-2">
@@ -366,17 +441,45 @@ window.openOCModal = () => {
                 </div>
             </form>
         </div>
-    `, 'max-w-3xl');
+    `, 'max-w-4xl');
+
+    // Disparar el primer precio al abrir
+    setTimeout(() => {
+        const firstProd = document.getElementById('oc-prod');
+        if(firstProd && firstProd.options[0]) {
+            document.getElementById('oc-cost').value = (firstProd.options[0].getAttribute('data-price') * 0.7).toFixed(2);
+        }
+    }, 100);
 
     window.addOCItem = () => {
         const pSel = document.getElementById('oc-prod');
         const pId = pSel.value;
         const name = pSel.options[pSel.selectedIndex].text;
         const cant = parseInt(document.getElementById('oc-cant').value);
-        const costEst = pSel.options[pSel.selectedIndex].getAttribute('data-price') * 0.7; // 30% margin approx
-        if(!pId || cant<=0) return;
+        let costEst = parseFloat(document.getElementById('oc-cost').value); 
         
-        window.tempOCItems.push({ productId: parseInt(pId), quantity: cant, cost: costEst, name });
+        const esDolares = document.getElementById('oc-moneda').value === 'USD';
+
+        if(!pId || cant<=0 || isNaN(costEst) || costEst<=0) {
+            return Swal.fire('Error', 'Por favor ingrese cantidad y costo válidos.', 'error');
+        }
+        
+        let costInSoles = costEst;
+        let etiqueta = 'S/';
+        if (esDolares) {
+            costInSoles = costEst * state.exchangeRate;
+            etiqueta = '$';
+        }
+        
+        // Fíjate que aquí NO pedimos lote, porque es una orden de compra, ¡no ha llegado nada aún!
+        window.tempOCItems.push({ 
+            productId: parseInt(pId), 
+            quantity: cant, 
+            cost: costInSoles, // guardado en soles
+            costoOriginal: costEst, // lo que digitó el usuario
+            monedaOriginal: etiqueta,
+            name 
+        });
         renderOCTable();
     };
     
@@ -390,7 +493,8 @@ window.openOCModal = () => {
             <tr>
                 <td class="p-2.5 font-medium text-slate-800">${i.name}</td>
                 <td class="p-2.5 text-slate-600">${i.quantity}</td>
-                <td class="p-2.5 text-slate-800 font-bold">${formatMoney((i.quantity*i.cost))}</td>
+                <td class="p-2.5 text-slate-800">${i.monedaOriginal} ${i.costoOriginal.toFixed(2)}</td>
+                <td class="p-2.5 text-slate-800 font-bold">${formatMoney((i.quantity * i.cost))}</td>
                 <td class="p-2.5 text-right">
                     <button type="button" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors" onclick="removeOCItem(${idx})">
                         <i class="bi bi-trash"></i>
@@ -421,5 +525,4 @@ window.openOCModal = () => {
         navigate('purchases');
     });
 };
-
 window.renderCompras = renderCompras;
