@@ -14,6 +14,7 @@ import com.DAO.*;
 import com.DTO.*;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 @WebServlet("/VentaController")
 public class VentaController extends HttpServlet {
@@ -35,33 +36,36 @@ public class VentaController extends HttpServlet {
         if(action == null || action.trim().isEmpty()){
             action = "insertar";
         }   
-
+        PrintWriter out = response.getWriter();;
         try {
-            PrintWriter out = null;
+            
 
             if(action.equals("insertar")){
-                out = response.getWriter();
 
                 BufferedReader reader = request.getReader();
+                JsonObject jsonInput = gson.fromJson(reader, JsonObject.class); 
 
-                VentaDTO venta = gson.fromJson(reader, VentaDTO.class);
+                VentaDTO venta = gson.fromJson(jsonInput.get("venta"), VentaDTO.class);
+
+                PagoDTO pagoInicial = null;
+                if (jsonInput.has("pagoInicial") && !jsonInput.get("pagoInicial").isJsonNull()) {
+                    pagoInicial = gson.fromJson(jsonInput.get("pagoInicial"), PagoDTO.class);
+                }
 
                 double totalCalculado = 0.0;
-                double descuento_producto = 0.0;
-                double descuento_global = 0.0;
 
                 if(venta.getDetalle() != null){
                     for(DetalleVentaDTO detalle : venta.getDetalle()){
-                        descuento_producto = detalle.getDescuento_prod();
-
+                        
                         double subTotalPd = (detalle.getCantidad() * detalle.getPrecio_unitario());
-                        subTotalPd -= (subTotalPd * descuento_producto);
+                        
+                        subTotalPd -= (subTotalPd * detalle.getDescuento_prod());
 
                         totalCalculado += subTotalPd;
                     }
                 }
 
-                totalCalculado -= totalCalculado*descuento_global;
+                totalCalculado -= totalCalculado * venta.getDescuento_global();
 
                 if(Math.abs(venta.getTotal() - totalCalculado) > 0.01){
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -73,18 +77,26 @@ public class VentaController extends HttpServlet {
                     
                 }
 
-                boolean insertarVenta = ventaDAO.insertarVenta(venta);
-                if(insertarVenta){
-                        response.setStatus(HttpServletResponse.SC_OK);
-                        out.print("{\"success\": true, \"message\": \"Venta registrada con éxito en Solda-Master\"}");
-                }else{
-                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                        out.print("{\"success\": false, \"error\": \"Error interno al insertar venta en SQL Server\"}");
+                boolean exito = ventaDAO.insertarVenta(venta, pagoInicial);
+                
+                if(exito){
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    out.print("{\"success\": true, \"message\": \"Venta y flujo financiero procesados con éxito en Solda-Master.\"}");
+                } else {
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    out.print("{\"success\": false, \"error\": \"Error interno en el servidor al guardar la transacción en SQL Server.\"}");
                 }
             }
         } catch (Exception e) {
-            // TODO: handle exception
-        }
+
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"error\": \"Error crítico en el controlador de ventas: " + e.getMessage() + "\"}");
         
+        } finally {
+
+            out.flush();
+            out.close();
+        }
     }
 }

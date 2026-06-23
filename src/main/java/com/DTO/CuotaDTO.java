@@ -3,7 +3,7 @@ package com.DTO;
 import java.util.Date;
 
 public class CuotaDTO {
-    private int idCuota;
+    private Integer idCuota;
     private VentaDTO venta;
     private int numeroCuota;
     private Date fechaVencimiento;
@@ -13,11 +13,11 @@ public class CuotaDTO {
     public CuotaDTO() {
     }
 
-    public int getIdCuota() {
+    public Integer getIdCuota() {
         return idCuota;
     }
 
-    public void setIdCuota(int idCuota) {
+    public void setIdCuota(Integer idCuota) {
         this.idCuota = idCuota;
     }
 

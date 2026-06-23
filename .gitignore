@@ -1,0 +1,18 @@
+# --- Maven Build Outputs ---
+target/
+*.jar
+*.war
+*.ear
+
+# --- IDE Config Files ---
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- OS temporary files ---
+.DS_Store
+Thumbs.db
