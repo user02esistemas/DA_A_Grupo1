@@ -1,4 +1,5 @@
 package com.DTO;
+import java.util.*;
 
 public class MovimientosDTO {
     private Integer idMovimiento;
@@ -6,7 +7,7 @@ public class MovimientosDTO {
     private Integer idLote;
     private Integer idTipoMovimiento;
     private Integer cantidad;
-    private int fecha;
+    private Date fecha;
     private String referencia;
 
     public MovimientosDTO() {
@@ -52,20 +53,20 @@ public class MovimientosDTO {
         this.cantidad = cantidad;
     }
 
-    public int getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(int fecha) {
-        this.fecha = fecha;
-    }
-
     public String getReferencia() {
         return referencia;
     }
 
     public void setReferencia(String referencia) {
         this.referencia = referencia;
+    }
+
+    public Date getFecha() {
+        return fecha;
+    }
+
+    public void setFecha(Date fecha) {
+        this.fecha = fecha;
     }
 
     

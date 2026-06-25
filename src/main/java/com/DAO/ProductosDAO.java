@@ -34,9 +34,10 @@ public class ProductosDAO {
                                     stock,
                                     stock_minimo,
                                     maneja_lote,
-                                    imagen_url)
+                                    imagen_url,
+                                    codigo_unico)
                 OUTPUT INSERTED.id_producto
-                VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+                VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)
                 """;
 
         try {
@@ -59,44 +60,34 @@ public class ProductosDAO {
                 .setParameter(10, prod.getStock_minimo())
                 .setParameter(11, prod.isManeja_lote() )
                 .setParameter(12, prod.getImagen_url())
+                .setParameter(13, prod.getCodigo_unico())
                 .getSingleResult();
             
             int idProd =idGenerado.intValue();
             Integer idLote = null;
-            Integer idCertificado = null;
 
-            if(prod.isManeja_lote() && prod.getStock() > 0 && lote != null){
-                
-                int stockLote = lote.getStock_lote();
-                prod.setStock(stockLote);
-
-                if(lote.getCerti() != null){
+            if (prod.isManeja_lote() && lote != null) {
+                Integer idCertificado = null;
+                if (lote.getCerti() != null) {
                     int idResultado = obtenerOCrearCertificado(em, lote.getCerti());
-                    if (idResultado > 0) {
-                        idCertificado = idResultado;
-                    }
+                    if (idResultado > 0) idCertificado = idResultado;
                 }
 
                 String sqlLote = """
-                        INSERT INTO lotes (
-                                    id_producto, 
-                                    id_certificado, 
-                                    numero_lote, 
-                                    fecha_entrada, 
-                                    stock_lote)
+                        INSERT INTO lotes (id_producto, id_certificado, numero_lote, fecha_entrada, stock_lote)
                         OUTPUT INSERTED.id_lote
-                        VALUES (?1,?2,?3,GETDATE(),?4)
+                        VALUES (?1, ?2, ?3, ?4, ?5)
                         """;
 
-                Number id = (Number)em.createNativeQuery(sqlLote)
+                Number idL = (Number) em.createNativeQuery(sqlLote)
                         .setParameter(1, idProd)
                         .setParameter(2, idCertificado)
                         .setParameter(3, lote.getNumero_lote())
-                        .setParameter(4, 0)
+                        .setParameter(4, new java.sql.Date(System.currentTimeMillis())) // Fecha actual
+                        .setParameter(5, lote.getStock_lote())
                         .getSingleResult();
-
-                idLote = id.intValue();
-
+                
+                idLote = idL.intValue();
             }
 
             if(prod.getStock() > 0){
@@ -427,5 +418,49 @@ public int obtenerOCrearCertificado(EntityManager em, CertificadosDTO certi) {
             return false;
         }
     }
+
+    @SuppressWarnings("unchecked")
+    public List<MovimientosDTO> mostrarKardex(int idProducto) {
+        EntityManager em = emf.createEntityManager();
+        List<MovimientosDTO> listaKardex = new ArrayList<>();
+        
+        String sql = """
+                SELECT id_movimiento, id_producto, id_lote, id_tipo_movimiento, cantidad, fecha, referencia
+                FROM movimientos_inventario
+                WHERE id_producto = ?1
+                ORDER BY fecha ASC
+                """;
+        try {
+            List<Object[]> result = em.createNativeQuery(sql)
+                                      .setParameter(1, idProducto)
+                                      .getResultList();
+                                      
+            for (Object[] fila : result) {
+                MovimientosDTO mov = new MovimientosDTO();
+                mov.setIdMovimiento(((Number) fila[0]).intValue());
+                mov.setIdProducto(((Number) fila[1]).intValue());
+                
+                if (fila[2] != null) mov.setIdLote(((Number) fila[2]).intValue());
+                
+                mov.setIdTipoMovimiento(((Number) fila[3]).intValue());
+                mov.setCantidad(((Number) fila[4]).intValue());
+                
+                // Formateo seguro de fecha
+                if (fila[5] != null) {
+                    mov.setFecha((java.util.Date) fila[5]); 
+                }
+                
+                mov.setReferencia((String) fila[6]);
+                
+                listaKardex.add(mov);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            em.close();
+        }
+        return listaKardex;
+    }
+    
 
 }

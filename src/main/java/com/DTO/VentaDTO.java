@@ -13,6 +13,7 @@ public class VentaDTO {
     private Double total;
     private Double subTotal;
     private Double descuento_global;
+    private List<PagoDTO> pagos;
     private List<DetalleVentaDTO> detalle;
     private List<CuotaDTO> cuotas;
 
@@ -124,5 +125,14 @@ public class VentaDTO {
         this.descuento_global = descuento_global;
     }
 
+    public List<PagoDTO> getPagos() {
+        return pagos;
+    }
+
+    public void setPagos(List<PagoDTO> pagos) {
+        this.pagos = pagos;
+    }
+
+    
     
 }

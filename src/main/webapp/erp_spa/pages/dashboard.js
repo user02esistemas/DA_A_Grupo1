@@ -5,7 +5,7 @@
     const products = await api.getProducts();
     const entities = await api.getEntities();
     const installments = await api.getInstallments ? await api.getInstallments() : [];
-    const movements = await api.getMovements ? await api.getMovements() : [];
+    const movements = await api.getRecentMovements ? await api.getRecentMovements() : [];
 
     // 2. Dates setup
     const now = new Date();

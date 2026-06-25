@@ -22,7 +22,7 @@ public class CompraDAO {
                                             serie_correlativa,
                                             fecha_compra,
                                             monto_total)
-                    OUTPUT INSERTED id_compra
+                    OUTPUT INSERTED.id_compra
                     VALUES(?1,?2,?3,?4,?5,GETDATE(),?6)
                 """;
         try {
@@ -60,7 +60,9 @@ public class CompraDAO {
 
                     MovimientosDTO movimiento = new MovimientosDTO();
                     movimiento.setIdProducto(detalle.getProducto().getId_producto());
-                    movimiento.setIdLote(detalle.getLote().getId_lote());
+                    
+                    Integer idLote = (detalle.getLote() != null) ? detalle.getLote().getId_lote() : null;
+                    movimiento.setIdLote(idLote);
                     movimiento.setCantidad(detalle.getCantidad());
                     movimiento.setIdTipoMovimiento(1);
                     movimiento.setReferencia(" Compra " + compra.getTipoComprobante() + " " + compra.getSerieCorrelativa());
@@ -103,10 +105,11 @@ public class CompraDAO {
                                                         precio_costo_unitario)
                         VALUES(?1,?2,?3,?4,?5)
                     """;
+            Integer idLote = (detalle.getLote() != null) ? detalle.getLote().getId_lote() : null;
             em.createNativeQuery(sql)
                 .setParameter(1, detalle.getCompra().getIdCompra())
                 .setParameter(2, detalle.getProducto().getId_producto())
-                .setParameter(3, detalle.getLote().getId_lote())
+                .setParameter(3, idLote)
                 .setParameter(4, detalle.getCantidad())
                 .setParameter(5, detalle.getPrecio_costo_unitario())
                 .executeUpdate();

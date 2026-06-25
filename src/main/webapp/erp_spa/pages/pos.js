@@ -746,89 +746,37 @@ async function checkout(isProforma) {
     }
 
     const payload = {
-        clientId: parseInt(clientId) || null,
-        docType: isProforma ? "Proforma" : document.getElementById("pos-doc").value,
-        paymentMethod: state.posInstallments.length > 0 ? "Crédito" : "Contado",
+        cliente: { idEntidad: parseInt(clientId) },
+        usuario: { idEntidad: state.user ? state.user.idEntidad : 1 }, // Asumiendo que el usuario está en estado
+        tipo_comprobante: isProforma ? "Proforma" : document.getElementById("pos-doc").value,
         total: tot,
-        date: state.liveTimeFormatted,
-        payments: finalPayments,
-        installments: state.posInstallments
+        fecha_emision: new Date(),
+        detalle: state.cart.map(item => ({
+            producto: { id_producto: item.product.id },
+            lote: item.product.manejaLote ? { id_lote: item.product.loteId } : null,
+            cantidad: item.quantity,
+            precio_unitario: item.price,
+            descuento_prod: item.discountType === '%' ? item.discount / 100 : 0,
+            sub_total: window.calcularSubtotalProducto(item)
+        }))
     };
 
-    const res = await api.processSale(payload, state.cart, isProforma);
+    const pagoInicial = finalPayments.length > 0 ? {
+        metodo: { idMetodoPago: 1 }, // Asumiendo 1 = Efectivo
+        monto_total: finalPayments[0].amount,
+        referencia: "Pago inicial POS"
+    } : null;
+
+    const res = await api.saveSale(payload, pagoInicial);
     
-    showModal(`
-        <div class="p-8 bg-slate-50 text-slate-800" id="print-area">
-            <div class="flex justify-between items-start mb-8 border-b border-slate-200 pb-6">
-                <div>
-                    <h2 class="text-2xl font-black tracking-tighter text-blue-600 mb-1">DELGADO <span class="text-slate-400 font-medium text-lg">Soluciones Industriales EIRL</span></h2>
-                    <p class="text-slate-500 text-sm">Av. Principal 123, Zona Industrial</p>
-                    <p class="text-slate-500 text-sm">RUC: 20555555555</p>
-                </div>
-                <div class="text-right border-l-4 border-blue-600 pl-4">
-                    <h3 class="text-lg font-bold uppercase tracking-wider">${res.type} ELECTRÓNICA</h3>
-                    <p class="text-xl font-bold font-mono text-slate-700 my-1">N° ${res.data.correlative}</p>
-                    <p class="text-sm font-semibold text-blue-600">Emisión: ${res.data.date}</p>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-6 mb-8 text-sm">
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Datos del Cliente</p>
-                    <p class="font-bold text-slate-800">${res.data.clientId ? document.getElementById("pos-client-name").textContent : "Cliente Mostrador"}</p>
-                    <p class="text-slate-600">${res.data.clientId ? document.getElementById("pos-client-doc").textContent : ""}</p>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Condiciones de Pago</p>
-                    <p class="font-bold text-slate-800">${res.data.paymentMethod}</p>
-                    ${res.data.payments && res.data.payments.length > 0 ? `<p class="text-slate-600 mt-1 text-xs">Detalle: ${res.data.payments.map(p=>`${p.method} (${window.formatMoney(p.amount)})`).join(", ")}</p>` : ""}
-                </div>
-            </div>
-            
-            <table class="w-full text-left mb-8">
-                <thead>
-                    <tr class="border-b-2 border-slate-200">
-                        <th class="py-2 text-slate-400 font-bold text-xs uppercase tracking-wider font-semibold">Cant.</th>
-                        <th class="py-2 text-slate-400 font-bold text-xs uppercase tracking-wider font-semibold">Descripción</th>
-                        <th class="py-2 text-slate-400 font-bold text-xs uppercase tracking-wider text-right font-semibold">P. Unit</th>
-                        <th class="py-2 text-slate-400 font-bold text-xs uppercase tracking-wider text-right font-semibold">Dcto</th>
-                        <th class="py-2 text-slate-400 font-bold text-xs uppercase tracking-wider text-right font-semibold">Total</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    ${state.cart.map(i=>{
-                        const p = i.price || i.product.price;
-                        const base = p * i.quantity;
-                        const itemTotal = window.calcularSubtotalProducto(i);
-                        const d = base - itemTotal;
-                        return `
-                        <tr class="text-sm">
-                            <td class="py-3 font-semibold text-slate-600">${i.quantity}</td>
-                            <td class="py-3 font-bold text-slate-800">${i.product.name}</td>
-                            <td class="py-3 text-right text-slate-600">${window.formatMoney(p)}</td>
-                            <td class="py-3 text-right text-red-500">${d > 0 ? "-" + window.formatMoney(d) : ""}</td>
-                            <td class="py-3 text-right font-bold text-slate-800">${window.formatMoney(itemTotal)}</td>
-                        </tr>`;
-                    }).join("")}
-                </tbody>
-            </table>
-            
-            <div class="flex justify-end pt-4 border-t-2 border-slate-200">
-                <div class="text-right">
-                    <p class="text-slate-500 font-medium mb-1">Descuento Global: ${state.globalDiscountType === "%" ? state.globalDiscount + "%" : "S/ " + state.globalDiscount.toFixed(2)}</p>
-                    <h2 class="text-3xl font-black text-blue-600">TOTAL: ${window.formatMoney(res.data.total)}</h2>
-                </div>
-            </div>
-        </div>
-        
-        <div class="p-4 bg-white border-t border-slate-200 flex justify-between items-center rounded-b-2xl">
-            <button class="px-4 py-2 rounded-xl text-slate-500 font-medium hover:bg-slate-100 transition-colors" onclick="closeModal(); posNewSale()"><i class="bi bi-x-lg mr-2"></i>Cerrar</button>
-            <div class="flex gap-2">
-                <button class="px-5 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold transition-colors shadow-md shadow-green-500/20" onclick="Swal.fire({ icon: 'success', title: 'WhatsApp', text: 'Documento enviado por WhatsApp.', confirmButtonColor: '#3b82f6', customClass: { popup: 'rounded-2xl' } })"><i class="bi bi-whatsapp mr-2"></i>WhatsApp</button>
-                <button class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors shadow-md shadow-blue-600/20" onclick="window.print()"><i class="bi bi-printer mr-2"></i>Imprimir</button>
-            </div>
-        </div>
-    `, "max-w-3xl !p-0 overflow-hidden");
+    Swal.fire({
+        icon: 'success',
+        title: 'Venta Procesada',
+        text: res.message,
+        confirmButtonColor: '#10B981'
+    });
+
+    posNewSale();
 }
 
 // Global scope registration for backward compatibility

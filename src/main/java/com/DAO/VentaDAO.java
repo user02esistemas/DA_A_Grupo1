@@ -22,7 +22,7 @@ public class VentaDAO {
 
     private ProductosDAO prod = new ProductosDAO();
 
-    public boolean insertarVenta(VentaDTO venta, PagoDTO pagoInicial){
+    public boolean insertarVenta(VentaDTO venta){
         EntityManager em = emf.createEntityManager();
         String sql = """
                 INSERT INTO ventas (
@@ -94,17 +94,20 @@ public class VentaDAO {
                 }
             }
 
-            if (pagoInicial != null && pagoInicial.getMonto_total() > 0) {
-                if (pagoInicial.getVenta() == null) {
-                    pagoInicial.setVenta(new VentaDTO());
-                }
+            if (venta.getPagos() != null && !venta.getPagos().isEmpty()) {
+                for (PagoDTO pago : venta.getPagos()) {
+                    if (pago.getMonto_total() > 0) {
+                        if (pago.getVenta() == null) {
+                            pago.setVenta(new VentaDTO());
+                        }
 
-                pagoInicial.getVenta().setIdVenta(idVenta);
-                
-                int idPago = insertarPagoInmediato(em, pagoInicial);
-
-                if (idPago == -1) {
-                    throw new Exception("Error al registrar el pago inicial de la venta.");
+                        pago.getVenta().setIdVenta(idVenta);
+                        
+                        int idPago = insertarPagoInmediato(em, pago);
+                        if (idPago == -1) {
+                            throw new Exception("Error al registrar uno de los pagos de la venta.");
+                        }
+                    }
                 }
             }
 
@@ -331,15 +334,13 @@ public class VentaDAO {
 
                 saldoAbonar -= aplicarMonto;
 
-                
 
                 DetallePagoDTO detalle = new DetallePagoDTO();
                 CuotaDTO cuota = new CuotaDTO();
                 cuota.setIdCuota(id_cuota);
+                detalle.setPago(pago);
                 detalle.setCuota(cuota);
                 detalle.setMonto(aplicarMonto);
-
-                detalle.setPago(pago);
 
                 boolean cuotaPagada = insertarDetallePago(em, detalle);
                 if(!cuotaPagada){

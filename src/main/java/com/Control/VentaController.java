@@ -57,17 +57,24 @@ public class VentaController extends HttpServlet {
                 if(venta.getDetalle() != null){
                     for(DetalleVentaDTO detalle : venta.getDetalle()){
                         
-                        double subTotalPd = (detalle.getCantidad() * detalle.getPrecio_unitario());
+                        int cantidad = (detalle.getCantidad() != null) ? detalle.getCantidad() : 0;
+                        double precioUnitario = (detalle.getPrecio_unitario() != null) ? detalle.getPrecio_unitario() : 0.0;
+                        double descuentoProd = (detalle.getDescuento_prod() != null) ? detalle.getDescuento_prod() : 0.0;
+
+                        double subTotalPd = (cantidad * precioUnitario);
                         
-                        subTotalPd -= (subTotalPd * detalle.getDescuento_prod());
+                        subTotalPd -= (subTotalPd * descuentoProd);
 
                         totalCalculado += subTotalPd;
                     }
                 }
 
-                totalCalculado -= totalCalculado * venta.getDescuento_global();
+                double descuentoGlobal = (venta.getDescuento_global() != null) ? venta.getDescuento_global() : 0.0;
+                totalCalculado -= totalCalculado * descuentoGlobal;
 
-                if(Math.abs(venta.getTotal() - totalCalculado) > 0.01){
+                double totalVenta = (venta.getTotal() != null) ? venta.getTotal() : 0.0;
+
+                if(Math.abs(totalVenta - totalCalculado) > 0.01){
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     out.print("{\"success\": false, \"error\": \"Validación fallida: El total de la venta no coincide con la suma de sus detalles.\"}");
                     return;
@@ -77,7 +84,14 @@ public class VentaController extends HttpServlet {
                     
                 }
 
-                boolean exito = ventaDAO.insertarVenta(venta, pagoInicial);
+                if (pagoInicial != null) {
+                    if (venta.getPagos() == null) {
+                        venta.setPagos(new java.util.ArrayList<>());
+                    }
+                    venta.getPagos().add(pagoInicial);
+                }
+
+                boolean exito = ventaDAO.insertarVenta(venta);
                 
                 if(exito){
                     response.setStatus(HttpServletResponse.SC_OK);
