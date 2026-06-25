@@ -7,6 +7,7 @@ import com.DTO.ProductosDTO;
 import com.DTO.CategoriasDTO;
 import com.DTO.UnidadesDTO;
 import com.DTO.CertificadosDTO;
+import com.DTO.EstadosSistemaDTO;
 import com.DTO.LotesDTO;
 import com.DTO.MovimientosDTO;
 
@@ -117,7 +118,6 @@ public class ProductosDAO {
     }
 
     @SuppressWarnings("unchecked")
-
     public List<ProductosDTO> mostrarProductos(){
         EntityManager em = emf.createEntityManager();
         List<ProductosDTO> prodList = new ArrayList<>();
@@ -127,14 +127,28 @@ public class ProductosDAO {
                     P.codigo_barras,
                     P.codigo_unico,
                     P.nombre_descripcion,
-                    C.nombre,
+                    CAT.nombre,
                     P.precio_venta,
                     P.stock,
+                    P.precio_mayorista,
+                    P.precio_distribuidor,
+                    P.id_estado,
                     M.nombre,
-                    P.maneja_lote
+                    P.maneja_lote,
+                    P.imagen_url,
+                    L.id_lote,
+                    CERT.archivo_url
+                    
                 FROM productos AS P
+                LEFT JOIN lotes AS L ON P.id_producto = L.id_producto
+                    AND L.id_lote = (
+                        SELECT TOP 1 id_lote FROM lotes 
+                        WHERE id_producto = P.id_producto 
+                        ORDER BY fecha_entrada DESC
+                    )
+                LEFT JOIN certificados CERT  ON L.id_certificado = CERT .id_certificado
                 INNER JOIN medidas AS M ON P.id_unidad_medida = M.id_medida
-                INNER JOIN categorias AS C ON P.id_categoria = C.id_categoria
+                INNER JOIN categorias AS CAT  ON P.id_categoria = CAT.id_categoria
                 """;
         try {
             Query query = em.createNativeQuery(sql);
@@ -154,12 +168,32 @@ public class ProductosDAO {
 
                 prod.setPrecio_venta(((Number) fila[5]).doubleValue());
                 prod.setStock(((Number)fila[6]).intValue());
+                prod.setPrecio_mayorista(((Number) fila[7]).doubleValue());
+                prod.setPrecio_distribuidor(((Number) fila[8]).doubleValue());
+
+                EstadosSistemaDTO estado = new EstadosSistemaDTO();
+                estado.setIdEstado(((Number)fila[9]).intValue());
+                prod.setEstado(estado);
 
                 UnidadesDTO unidad = new UnidadesDTO();
-                unidad.setNombre((String)fila[7]);
+                unidad.setNombre((String)fila[10]);
                 prod.setUnidad(unidad);
 
-                prod.setManeja_lote((Boolean) fila[8]);
+                prod.setManeja_lote((Boolean) fila[11]);
+                prod.setImagen_url((String)fila[12]);
+
+                if (prod.isManeja_lote() && fila[13] != null) {
+                    LotesDTO lote = new LotesDTO();
+                    lote.setId_lote(((Number) fila[13]).intValue());
+
+                    if (fila[14] != null) {
+                        CertificadosDTO certi = new CertificadosDTO();
+                        certi.setArchivo_url((String) fila[14]);
+                        lote.setCerti(certi);
+                    }
+
+                    prod.setLote(lote);
+                }
 
                 prodList.add(prod);
             }
@@ -461,6 +495,6 @@ public int obtenerOCrearCertificado(EntityManager em, CertificadosDTO certi) {
         }
         return listaKardex;
     }
-    
+
 
 }

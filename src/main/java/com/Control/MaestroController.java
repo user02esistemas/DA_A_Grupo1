@@ -21,7 +21,6 @@ public class MaestroController extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private CertificadosDAO certiDAO = new CertificadosDAO();
-    private LotesDAO loteDAO = new LotesDAO();
     private ProductosDAO prodDAO = new ProductosDAO();
     private EntidadesDAO entiDAO = new EntidadesDAO();
     private UsuariosDAO usuDAO = new UsuariosDAO();
@@ -32,7 +31,6 @@ public class MaestroController extends HttpServlet {
         dataMaster.put("listar", entiDAO.listarEntidades());
         dataMaster.put("listarUsu", usuDAO.listarUsuarios());
         dataMaster.put("listarProd", prodDAO.mostrarProductos());
-        dataMaster.put("listarLotes", loteDAO.mostrarLotes());
         dataMaster.put("listarCerti", certiDAO.mostrarCertificados());
 
         response.setContentType("application/json");

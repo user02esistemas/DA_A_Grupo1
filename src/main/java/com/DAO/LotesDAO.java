@@ -4,7 +4,7 @@ import java.util.*;
 
 import com.DTO.CertificadosDTO;
 import com.DTO.LotesDTO;
-import com.DTO.ProductosDTO;
+
 
 import jakarta.persistence.*;
 
@@ -53,40 +53,44 @@ public class LotesDAO {
     }
 
     @SuppressWarnings("unchecked")
-    public List<LotesDTO> mostrarLotes(){
+    public List<LotesDTO> mostarMLotesDTOs(int idProducto){
         EntityManager em = emf.createEntityManager();
         List<LotesDTO> listaLotes = new ArrayList<>();
 
         String sql = """
-                SELECT id_lote, 
-                    id_certificado,
-                    id_producto,
-                    numero_lote,
-                    fecha_entrada,
-                    stock_lote
-                FROM lotes
+                SELECT 
+                    L.id_lote,
+                    L.numero_lote, 
+                    L.fecha_entrada,
+                    L.stock_lote,
+                    C.archivo_url 
+                    FROM 
+                    productos AS P
+                    INNER JOIN lotes AS L ON P.id_producto = L.id_producto
+                    LEFT JOIN certificados AS C ON L.id_certificado = C.id_certificado
+                    WHERE P.id_producto = ?1
                 """;
 
         try {
             
-            Query query = em.createNativeQuery(sql);
-            List<Object[]> resultado = query.getResultList();
+            List<Object[]> resultado = em.createNativeQuery(sql)
+                .setParameter(1, idProducto)
+                .getResultList();
 
             for(Object[] fila : resultado){
                 LotesDTO lote = new LotesDTO();
                 lote.setId_lote(((Number)fila[0]).intValue());
+                lote.setNumero_lote((String)fila[1]);
 
-                CertificadosDTO certi = new CertificadosDTO();
-                certi.setId_certificado(((Number)fila[1]).intValue());
-                lote.setCerti(certi);
-
-                ProductosDTO prod = new ProductosDTO();
-                prod.setId_producto(((Number)fila[2]).intValue());
-                lote.setProducto(prod);
-
-                lote.setNumero_lote((String)fila[3]);
-                lote.setFecha_entrada((Date)fila[4]);
-                lote.setStock_lote(((Number)fila[5]).intValue());
+                lote.setFecha_entrada((java.util.Date) fila[2]);
+                lote.setStock_lote(((Number) fila[3]).intValue());
+                
+                String archivoUrl = (String)fila[4];
+                if (archivoUrl != null && !archivoUrl.trim().isEmpty()) {
+                    CertificadosDTO certi = new CertificadosDTO();
+                    certi.setArchivo_url(archivoUrl);
+                    lote.setCerti(certi);
+                }
 
                 listaLotes.add(lote);
             }

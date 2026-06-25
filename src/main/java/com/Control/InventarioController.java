@@ -22,6 +22,7 @@ public class InventarioController extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private ProductosDAO prodDAO = new ProductosDAO();
+    private LotesDAO loteDAO = new LotesDAO();
     private Gson gson = new Gson();
 
     @Override
@@ -53,11 +54,27 @@ public class InventarioController extends HttpServlet {
                     List<UnidadesDTO> listaMedidas = prodDAO.mostrarMedidas();
                     out.print(gson.toJson(listaMedidas));
                     break;
+
+                case "listarLotesPrd":
+                    String idProducto = request.getParameter("idProducto");
+
+                    if(idProducto != null && !idProducto.isEmpty() && !idProducto.equals("undefined")){
+                        try {
+                            int idPro = Integer.parseInt(idProducto);
+                            List<LotesDTO> lotes = loteDAO.mostarMLotesDTOs(idPro);
+                            out.print(gson.toJson(lotes));
+                        } catch (NumberFormatException e) {
+                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                            out.print("{\"error\":\"ID debe ser numérico\"}");
+                        }
+                    }else {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"error\":\"ID Producto faltante\"}");
+                    }
+                    break;
                     
                 case "kardex":
                     String idProdParam = request.getParameter("idProducto");
-                    // Log para ver qué llega desde el navegador
-                    System.out.println("DEBUG - ID recibido en Java: " + idProdParam); 
 
                     if (idProdParam != null && !idProdParam.isEmpty() && !idProdParam.equals("undefined")) {
                         try {
@@ -72,6 +89,7 @@ public class InventarioController extends HttpServlet {
                         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         out.print("{\"error\":\"ID Producto faltante\"}");
                     }
+
                     break;
 
                 default:

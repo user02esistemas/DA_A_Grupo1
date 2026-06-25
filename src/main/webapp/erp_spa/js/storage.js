@@ -126,10 +126,14 @@
         },
         
         async getLotes(productId) {
-            await delay(50);
-            return productId !== undefined 
-                ? MOCK_DB.lotes.filter(l => l.productId === productId) 
-                : JSON.parse(JSON.stringify(MOCK_DB.lotes));
+            try {
+                const response = await fetch(`InventarioController?action=listarLotesPrd&idProducto=${encodeURIComponent(productId)}`);
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                console.error('Error al obtener lotes:', e);
+                return [];
+            }
         },
         
         async saveLote(lote) {

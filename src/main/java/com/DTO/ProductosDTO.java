@@ -15,6 +15,7 @@ public class ProductosDTO {
     private EstadosSistemaDTO estado;
     private UnidadesDTO unidad;
     private CategoriasDTO categoria;
+    private LotesDTO lote;
 
     public ProductosDTO() {
     }
@@ -131,6 +132,14 @@ public class ProductosDTO {
         this.categoria = categoria;
     }
 
+    public LotesDTO getLote() {
+        return lote;
+    }
 
+    public void setLote(LotesDTO lote) {
+        this.lote = lote;
+    }
+
+    
     
 }

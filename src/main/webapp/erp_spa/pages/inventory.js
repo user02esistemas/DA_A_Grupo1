@@ -608,21 +608,21 @@ window.renderLotesModalContent = async () => {
 
     const rows = lotes.map(l => `
         <tr class="hover:bg-slate-50 transition-colors">
-            <td class="p-3 font-mono font-bold text-slate-800">${l.loteNumber}</td>
-            <td class="p-3 text-slate-500">${l.dateIn}</td>
-            <td class="p-3 text-slate-700 font-bold">${l.stock} unid.</td>
+            <td class="p-3 font-mono font-bold text-slate-800">${l.numero_lote || '-'}</td>
+            <td class="p-3 text-slate-500">${l.fecha_entrada ? new Date(l.fecha_entrada).toLocaleDateString('es-PE') : '-'}</td>
+            <td class="p-3 text-slate-700 font-bold">${l.stock_lote} unid.</td>
             <td class="p-3">
-                ${l.hasCert
+                ${l.certi
                     ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"><i class="bi bi-file-pdf"></i> Certificado</span><br>
-                       <small class="text-slate-400 text-[10px] font-mono block mt-0.5">${l.certificateName}</small>`
+                       <small class="text-slate-400 text-[10px] font-mono block mt-0.5">${l.certi.archivo_url}</small>`
                     : '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800"><i class="bi bi-exclamation-triangle"></i> Faltante</span>'}
             </td>
             <td class="p-3 text-right">
-                ${l.hasCert
-                    ? `<button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" onclick="alert('Descargando certificado ${l.certificateName}')" title="Descargar"><i class="bi bi-download"></i></button>`
+                ${l.certi
+                    ? `<button class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" onclick="alert('Descargando certificado ${l.certi.archivo_url}')" title="Descargar"><i class="bi bi-download"></i></button>`
                     : `<label class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-all cursor-pointer inline-block" title="Subir PDF">
                           <i class="bi bi-upload"></i>
-                          <input type="file" accept=".pdf" class="hidden" onchange="uploadCert(event, ${l.id})">
+                          <input type="file" accept=".pdf" class="hidden" onchange="uploadCert(event, ${l.id_lote})">
                        </label>`
                 }
             </td>
@@ -702,7 +702,6 @@ window.addNewLote = async () => {
         hasCert:    false
     });
 
-    // ─── BUG 3 CORREGIDO: usar id_producto en lugar de id ───────────────────
     const prod = state.caches.products.find(x => x.id_producto === state.currentLotesProductId);
     if (prod) {
         prod.stock += stock;
