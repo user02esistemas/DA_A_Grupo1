@@ -176,6 +176,8 @@
                 return[];
             }
         },
+
+        
         
         async getTipoEntities(){
             try{
@@ -365,6 +367,11 @@
             }
         },
 
+        async getSales() {
+            await delay(50);
+            return JSON.parse(JSON.stringify(MOCK_DB.sales));
+        },
+
         async getMovements(productId) {
             if (!productId) {
                 console.error("Kardex Error: No se recibió un ID de producto válido.");
@@ -399,9 +406,19 @@
             }
         },
 
-        async getSales() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.sales));
+        async getSalesCredt() {
+            try {
+                const response = await fetch('VentaController?action=listarPagos');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                return await response.json();
+                
+            } catch (e) {
+                console.error('Error fetching entities:', e);
+                return[];
+            }
         },
         
         async processNotaCredito(nc) {

@@ -7,6 +7,8 @@ import java.util.List;
 import com.DTO.CuotaDTO;
 import com.DTO.DetallePagoDTO;
 import com.DTO.DetalleVentaDTO;
+import com.DTO.EntidadesDTO;
+import com.DTO.EstadosSistemaDTO;
 import com.DTO.MovimientosDTO;
 import com.DTO.PagoDTO;
 import com.DTO.MetodosPagoDTO;
@@ -390,6 +392,25 @@ public class VentaDAO {
         return yaPagado.doubleValue();
     }
 
+    public double obtenerSaldoPendienteVenta(int idVenta) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            String sql = """
+                    SELECT V.total - COALESCE((SELECT SUM(P.monto_total) FROM pagos P WHERE P.id_venta = V.id_venta), 0)
+                    FROM ventas V WHERE V.id_venta = ?1
+                    """;
+            Number saldo = (Number) em.createNativeQuery(sql)
+                    .setParameter(1, idVenta)
+                    .getSingleResult();
+            return saldo != null ? saldo.doubleValue() : 0.0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0.0;
+        } finally {
+            em.close();
+        }
+    }
+
     public boolean actualizarEstadoCuotaDinamico(EntityManager em, DetallePagoDTO detalle) {
         try {
             String sql = """
@@ -433,6 +454,125 @@ public class VentaDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<VentaDTO>listarPagos(){
+        EntityManager em = emf.createEntityManager();
+        List<VentaDTO> listaVentaPend = new ArrayList<>();
+
+        String sql = """
+                    SELECT 
+                        V.id_venta,
+                        V.serie_correlativa,
+                        V.total,
+                        EN.nombre_razon_social AS cliente,
+                        EN.id_entidad AS cliente_id,
+                        V.total - COALESCE(
+                            (SELECT SUM(P.monto_total) 
+                            FROM pagos P 
+                            WHERE P.id_venta = V.id_venta), 0
+                        ) AS totalPendiente,
+                        EST_V.nombre AS estados      
+
+                    FROM ventas V
+                    INNER JOIN entidades EN ON V.id_cliente = EN.id_entidad
+                    INNER JOIN estados_sistema EST_V ON V.id_estado_venta = EST_V.id_estado  
+                    WHERE EXISTS (SELECT 1 FROM cuotas C WHERE C.id_venta = V.id_venta)      
+                    ORDER BY V.id_venta DESC;
+                """;
+        try {
+
+            Query query = em.createNativeQuery(sql);
+            List<Object[]> results = query.getResultList();
+
+            for(Object[] fila : results){
+                VentaDTO ventaPend = new VentaDTO();
+                ventaPend.setIdVenta(((Number)fila[0]).intValue());
+                ventaPend.setSerie_correlativa((String)fila[1]);
+                ventaPend.setTotal(((Number)fila[2]).doubleValue());
+                
+                EntidadesDTO cliente = new EntidadesDTO ();
+                cliente.setNombre_RazonSocial((String)fila[3]);
+                cliente.setIdEntidad(((Number)fila[4]).intValue());
+
+                ventaPend.setCliente(cliente);
+                ventaPend.setTotal_pendiente(((Number)fila[5]).doubleValue());
+
+                EstadosSistemaDTO estado = new EstadosSistemaDTO();
+                estado.setNombreEstado((String)fila[6]);
+                
+                ventaPend.setEstado(estado);
+
+                listaVentaPend.add(ventaPend);
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            em.close();
+        }
+        return listaVentaPend;
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<CuotaDTO> obtenerCronogramaPorVenta(int idVenta){
+        EntityManager em = emf.createEntityManager();
+        List<CuotaDTO> cronograma = new ArrayList<>();
+
+        String sql = """
+                SELECT 
+                    C.id_cuota,
+                    C.numero_cuota,
+                    C.fecha_vencimiento,
+                    C.monto,
+                    
+                    -- Monto pagado acumulado (Suma del detalle)
+                    COALESCE((SELECT SUM(DP.monto) FROM detalle_pagos DP WHERE DP.id_cuota = C.id_cuota), 0) AS pagado,
+                    
+                    -- Saldo restante (Monto - Pagado)
+                    C.monto - COALESCE((SELECT SUM(DP.monto) FROM detalle_pagos DP WHERE DP.id_cuota = C.id_cuota), 0) AS saldo,
+                    
+                    -- Nombre del estado directo de la tabla de estados
+                    EST.nombre AS estado_visual
+                    
+                FROM cuotas C
+                INNER JOIN estados_sistema EST ON C.id_estado_cuota = EST.id_estado
+                WHERE C.id_venta = ?1
+                ORDER BY C.numero_cuota ASC;
+                """;
+        try {
+            Query query = em.createNativeQuery(sql);
+            query.setParameter(1, idVenta);
+            List<Object[]> results = query.getResultList();
+
+            for (Object[] fila : results) {
+                CuotaDTO cuota = new CuotaDTO();
+                cuota.setIdCuota(((Number) fila[0]).intValue());
+                cuota.setNumeroCuota(((Number) fila[1]).intValue());
+                
+                if (fila[2] != null) {
+                    cuota.setFechaVencimiento((java.util.Date) fila[2]);
+                }
+                
+                cuota.setMonto(((Number) fila[3]).doubleValue());
+                
+                cuota.setMontoPagado(((Number) fila[4]).doubleValue());   
+                cuota.setMontoPendiente(((Number) fila[5]).doubleValue());
+                
+                EstadosSistemaDTO estado = new EstadosSistemaDTO();
+                estado.setNombreEstado((String)fila[6]);
+
+                cuota.setEstado(estado);
+
+                cronograma.add(cuota);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            em.close();
+        }
+        return cronograma;
     }
     
 

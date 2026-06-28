@@ -11,7 +11,6 @@ import java.util.Map;
 
 import com.DAO.CertificadosDAO;
 import com.DAO.EntidadesDAO;
-import com.DAO.LotesDAO;
 import com.DAO.ProductosDAO;
 import com.DAO.UsuariosDAO;
 import com.google.gson.Gson;

@@ -12,7 +12,6 @@ public class NotaDAO {
     private VentaDAO ventaDAO = new VentaDAO();
     private ProductosDAO prod = new ProductosDAO();
 
-    @SuppressWarnings("unchecked")
     public boolean insertarNota(NotaDTO nota){
         EntityManager em = emf.createEntityManager();
         String sql = """

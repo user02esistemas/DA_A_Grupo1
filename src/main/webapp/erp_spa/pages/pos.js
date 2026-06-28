@@ -32,7 +32,7 @@ async function renderPOS(c) {
     if (!state.posProductSearch)  state.posProductSearch  = '';
 
     // ── Categorías ───────────────────────────────────────────
-    // categoria es un objeto { nombreCategoria: "..." }
+    
     const categories = ['Todos', ...new Set(
         state.caches.products.map(p => p.categoria?.nombreCategoria ?? 'Sin categoría')
     )];

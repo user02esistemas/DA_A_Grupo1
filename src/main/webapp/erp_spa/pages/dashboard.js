@@ -1,6 +1,6 @@
 ﻿async function renderDashboard(c) {
     // 1. Fetch data from simulated DB/API layers
-    const sales = await api.getSales();
+    const sales = await api.getSales(); // NO TOCAR EXPLOTA EL SISTEMA XDDD
     const purchases = await api.getPurchases();
     const products = await api.getProducts();
     const entities = await api.getEntities();

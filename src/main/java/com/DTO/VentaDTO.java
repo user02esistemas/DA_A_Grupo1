@@ -13,6 +13,7 @@ public class VentaDTO {
     private Double total;
     private Double subTotal;
     private Double descuento_global;
+    private Double total_pendiente;
     private List<PagoDTO> pagos;
     private List<DetalleVentaDTO> detalle;
     private List<CuotaDTO> cuotas;
@@ -133,5 +134,14 @@ public class VentaDTO {
         this.usuario = usuario;
     }
 
+    public Double getTotal_pendiente() {
+        return total_pendiente;
+    }
+
+    public void setTotal_pendiente(Double total_pendiente) {
+        this.total_pendiente = total_pendiente;
+    }
+
+    
     
 }

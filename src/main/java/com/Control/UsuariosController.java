@@ -90,7 +90,7 @@ public class UsuariosController extends HttpServlet {
                         response.setStatus(HttpServletResponse.SC_OK);
                         out.print("{\"success\": true, \"message\": \"Usuario registrada con éxito en SQL Server\"}");
                     } else{
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // Estado 500
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
                         out.print("{\"success\": false, \"error\": \"Error interno en la base de datos al insertar\"}");
                     }
                     break;
@@ -108,13 +108,13 @@ public class UsuariosController extends HttpServlet {
                     }
                     break;
                 default:
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // Estado 400
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST); 
                     out.print("{\"success\": false, \"error\": \"Acción POST no válida\"}");
                     break;
             }
         }catch (Exception e) {
             e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // Estado 500
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
             try {
                 response.getWriter().print("{\"success\": false, \"error\": \"" + e.getMessage() + "\"}");
             } catch (IOException ioEx) {

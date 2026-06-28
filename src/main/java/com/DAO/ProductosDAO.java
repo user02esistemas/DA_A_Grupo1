@@ -85,7 +85,7 @@ public class ProductosDAO {
                         .setParameter(2, idCertificado)
                         .setParameter(3, lote.getNumero_lote())
                         .setParameter(4, new java.sql.Date(System.currentTimeMillis())) // Fecha actual
-                        .setParameter(5, lote.getStock_lote())
+                        .setParameter(5, 0)
                         .getSingleResult();
                 
                 idLote = idL.intValue();
@@ -137,7 +137,8 @@ public class ProductosDAO {
                     P.maneja_lote,
                     P.imagen_url,
                     L.id_lote,
-                    CERT.archivo_url
+                    CERT.archivo_url,
+                    P.stock_minimo
                     
                 FROM productos AS P
                 LEFT JOIN lotes AS L ON P.id_producto = L.id_producto
@@ -146,9 +147,9 @@ public class ProductosDAO {
                         WHERE id_producto = P.id_producto 
                         ORDER BY fecha_entrada DESC
                     )
-                LEFT JOIN certificados CERT  ON L.id_certificado = CERT .id_certificado
+                LEFT JOIN certificados CERT  ON L.id_certificado = CERT.id_certificado
                 INNER JOIN medidas AS M ON P.id_unidad_medida = M.id_medida
-                INNER JOIN categorias AS CAT  ON P.id_categoria = CAT.id_categoria
+                INNER JOIN categorias AS CAT ON P.id_categoria = CAT.id_categoria
                 """;
         try {
             Query query = em.createNativeQuery(sql);

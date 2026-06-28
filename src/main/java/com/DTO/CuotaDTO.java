@@ -8,6 +8,8 @@ public class CuotaDTO {
     private int numeroCuota;
     private Date fechaVencimiento;
     private Double monto;
+    private Double montoPagado;
+    private Double montoPendiente; 
     private EstadosSistemaDTO estado;
     
     public CuotaDTO() {
@@ -59,6 +61,22 @@ public class CuotaDTO {
 
     public void setEstado(EstadosSistemaDTO estado) {
         this.estado = estado;
+    }
+
+    public Double getMontoPagado() {
+        return montoPagado;
+    }
+
+    public void setMontoPagado(Double montoPagado) {
+        this.montoPagado = montoPagado;
+    }
+
+    public Double getMontoPendiente() {
+        return montoPendiente;
+    }
+
+    public void setMontoPendiente(Double montoPendiente) {
+        this.montoPendiente = montoPendiente;
     }
 
     
