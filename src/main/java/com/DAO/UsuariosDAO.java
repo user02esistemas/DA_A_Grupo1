@@ -1,14 +1,16 @@
 package com.DAO;
 
-import com.DTO.UsuariosDTO;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.mindrot.jbcrypt.BCrypt;
+
+import com.DTO.UsuariosDTO;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.Query;
-import org.mindrot.jbcrypt.BCrypt;
 
 public class UsuariosDAO {
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("SDDGPU");
@@ -142,4 +144,66 @@ public class UsuariosDAO {
         }
         return listUsu;
     }
+
+    public boolean actualizarUsuario(UsuariosDTO usu) {
+        EntityManager em = emf.createEntityManager();
+        
+        String sql = """
+                    UPDATE usuarios 
+                    SET id_entidad = ?1, 
+                        usuario = ?2, 
+                        id_rol = ?3,
+                        id_ estado = ?4
+                    WHERE id_usuario = ?5
+                    """;
+
+        try {
+            em.getTransaction().begin();
+            em.createNativeQuery(sql)
+                .setParameter(1, usu.getIdEntidad())
+                .setParameter(2, usu.getUsuario())
+                .setParameter(3, usu.getIdRol())
+                .setParameter(4, usu.getIdEstado())
+                .setParameter(5, usu.getIdUsuario())
+                .executeUpdate();
+
+            em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }
+
+    public boolean eliminarUsuario(int idUsuario) {
+        EntityManager em = emf.createEntityManager();
+        
+        String sql = """
+                    UPDATE usuarios 
+                    SET id_estado = 16 
+                    WHERE id_usuario = ?1
+                    """;
+        try {
+            em.getTransaction().begin();
+            em.createNativeQuery(sql)
+                .setParameter(1, idUsuario)
+                .executeUpdate();
+
+            em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }    
 }

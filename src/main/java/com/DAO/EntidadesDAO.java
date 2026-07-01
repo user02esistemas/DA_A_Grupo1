@@ -1,10 +1,12 @@
 package com.DAO;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.DTO.EntidadesDTO;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import java.util.List;
-import java.util.ArrayList;
-import com.DTO.EntidadesDTO;
 import jakarta.persistence.Query;
 
 public class EntidadesDAO {
@@ -87,4 +89,69 @@ public class EntidadesDAO {
         }
         return entidadesList;
     }
+
+    public boolean actualizarEntidad(EntidadesDTO entidad) {
+        EntityManager em = emf.createEntityManager();
+        String sql = """
+                    UPDATE entidades 
+                    SET id_tipo_entidad = ?1, 
+                        tipo_documento = ?2, 
+                        numero_documento = ?3, 
+                        nombre_razon_social = ?4, 
+                        email = ?5, 
+                        direccion = ?6, 
+                        telefono = ?7, 
+                        id_estado = ?8
+                    WHERE id_entidad = ?9
+                    """;
+        try {
+            em.getTransaction().begin();
+            em.createNativeQuery(sql)
+                .setParameter(1, entidad.getIdTipoEntidad())
+                .setParameter(2, entidad.getTipoDocumento())
+                .setParameter(3, entidad.getNumeroDocumento())
+                .setParameter(4, entidad.getNombre_RazonSocial())
+                .setParameter(5, entidad.getEmail())
+                .setParameter(6, entidad.getDireccion())
+                .setParameter(7, entidad.getTelefono())
+                .setParameter(8, entidad.getIdEstado()) // Mapeado desde el DTO correspondiente
+                .setParameter(9, entidad.getIdEntidad())
+                .executeUpdate();
+            em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }
+
+    public boolean eliminarEntidad(int idEntidad) {
+        EntityManager em = emf.createEntityManager();
+        String sql = """
+                    DELETE FROM entidades 
+                    WHERE id_entidad = ?1
+                    """;
+        try {
+            em.getTransaction().begin();
+            em.createNativeQuery(sql)
+                .setParameter(1, idEntidad)
+                .executeUpdate();
+            em.getTransaction().commit();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }
+
 }

@@ -1,7 +1,14 @@
 package com.DAO;
 
-import com.DTO.*;
 import java.util.List;
+
+import com.DTO.CuotaDTO;
+import com.DTO.DetalleNotaDTO;
+import com.DTO.DetallePagoDTO;
+import com.DTO.MovimientosDTO;
+import com.DTO.NotaDTO;
+import com.DTO.PagoDTO;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
