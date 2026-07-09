@@ -1,0 +1,7 @@
+/* Dashboard Specific Styling */
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 100%;
+    width: 100%;
+}

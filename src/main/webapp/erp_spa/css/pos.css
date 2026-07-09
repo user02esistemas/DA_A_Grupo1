@@ -1,0 +1,11 @@
+/* POS Specific Styling */
+.pos-products-grid::-webkit-scrollbar {
+    width: 6px;
+}
+.pos-products-grid::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 10px;
+}
+.pos-products-grid::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
