@@ -6,7 +6,7 @@ import java.util.List;
 public class OrdenCompraDTO {
     private Integer idOrden;
     private EntidadesDTO proveedor;
-    private EntidadesDTO usuario;
+    private UsuariosDTO usuario;
     private Date fecha;
     private Date fechaEntrega;
     private EstadosSistemaDTO estado;
@@ -27,13 +27,6 @@ public class OrdenCompraDTO {
         this.proveedor = proveedor;
     }
 
-    public EntidadesDTO getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(EntidadesDTO usuario) {
-        this.usuario = usuario;
-    }
 
     public Date getFecha() {
         return fecha;
@@ -85,6 +78,18 @@ public class OrdenCompraDTO {
 
     public void setIdOrden(Integer idOrden) {
         this.idOrden = idOrden;
+    }
+
+
+
+    public UsuariosDTO getUsuario() {
+        return usuario;
+    }
+
+
+
+    public void setUsuario(UsuariosDTO usuario) {
+        this.usuario = usuario;
     }
 
     

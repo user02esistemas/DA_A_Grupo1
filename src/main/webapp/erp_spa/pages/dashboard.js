@@ -19,8 +19,9 @@
     const monthlySales = sales.filter(s => s.date.startsWith(currentMonthStr) && s.status !== 'Anulado');
     const monthlyTotal = monthlySales.reduce((sum, s) => sum + s.total, 0);
 
-    const monthlyPurchases = purchases.filter(p => p.date.startsWith(currentMonthStr));
-    const monthlyPurchasesTotal = monthlyPurchases.reduce((sum, p) => sum + p.total, 0);
+    // 3. Metric Calculations
+    const monthlyPurchases = purchases.filter(p => p?.fechaCompra && typeof p.fechaCompra === 'string' && p.fechaCompra.startsWith(currentMonthStr));
+    const monthlyPurchasesTotal = monthlyPurchases.reduce((sum, p) => sum + (p.montoTotal ?? 0), 0);
 
     const estimatedUtility = monthlyTotal - monthlyPurchasesTotal;
 
@@ -90,8 +91,8 @@
         const daySales = sales.filter(s => s.date.startsWith(dStr) && s.status !== 'Anulado');
         salesWeeklyData.push(daySales.reduce((sum, s) => sum + s.total, 0));
 
-        const dayPurchases = purchases.filter(p => p.date.startsWith(dStr));
-        purchasesWeeklyData.push(dayPurchases.reduce((sum, p) => sum + p.total, 0));
+        const dayPurchases = purchases.filter(p => p?.fechaCompra && p.fechaCompra.startsWith(dStr));
+        purchasesWeeklyData.push(dayPurchases.reduce((sum, p) => sum + (p.montoTotal ?? 0), 0));
     }
 
     // 9. Timeline of activities (Last 20)
@@ -109,10 +110,10 @@
     });
     purchases.forEach(p => {
         timeline.push({
-            time: p.date,
+            time: p.fechaCompra,
             label: 'Compra Registrada',
-            desc: `Factura ${p.nroFactura} - ${p.supplierName || 'Proveedor'}`,
-            amount: p.total,
+            desc: `Factura ${p.serieCorrelativa ?? ''} - ${p.proveedor?.nombre_RazonSocial || 'Proveedor'}`,
+            amount: p.montoTotal ?? 0,
             isNegative: true,
             icon: 'fa-cart-shopping',
             color: 'text-emerald-500 bg-emerald-500/10'
