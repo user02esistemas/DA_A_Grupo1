@@ -4,7 +4,7 @@ import java.util.*;
 
 import com.DTO.CertificadosDTO;
 import com.DTO.LotesDTO;
-import com.DTO.MovimientosDTO;
+
 
 import jakarta.persistence.*;
 
@@ -48,68 +48,6 @@ public class LotesDAO {
             }
             return -1;
             
-        } finally {
-            em.close();
-        }
-    }
-
-     public boolean registrarEntradaLote(int idProducto, LotesDTO lote) {
-        if (idProducto <= 0 || lote == null || lote.getNumero_lote() == null
-                || lote.getNumero_lote().trim().isEmpty() || lote.getStock_lote() == null
-                || lote.getStock_lote() <= 0) {
-            return false;
-        }
-
-        EntityManager em = emf.createEntityManager();
-        try {
-            em.getTransaction().begin();
-
-            Number productoExiste = (Number) em.createNativeQuery("""
-                    SELECT COUNT(*) FROM productos
-                    WHERE id_producto = ?1 AND maneja_lote = 1
-                    """)
-                    .setParameter(1, idProducto)
-                    .getSingleResult();
-
-            if (productoExiste.intValue() == 0) {
-                throw new IllegalArgumentException("El producto no existe o no maneja lotes");
-            }
-
-            String sqlLote = """
-                    INSERT INTO lotes (id_producto, id_certificado, numero_lote, fecha_entrada, stock_lote)
-                    OUTPUT INSERTED.id_lote
-                    VALUES (?1, NULL, ?2, ?3, 0)
-                    """;
-
-            java.util.Date fecha = lote.getFecha_entrada() != null
-                    ? lote.getFecha_entrada() : new java.util.Date();
-            Number idLoteGenerado = (Number) em.createNativeQuery(sqlLote)
-                    .setParameter(1, idProducto)
-                    .setParameter(2, lote.getNumero_lote().trim())
-                    .setParameter(3, new java.sql.Date(fecha.getTime()))
-                    .getSingleResult();
-
-            MovimientosDTO movimiento = new MovimientosDTO();
-            movimiento.setIdProducto(idProducto);
-            movimiento.setIdLote(idLoteGenerado.intValue());
-            movimiento.setCantidad(lote.getStock_lote());
-            movimiento.setIdTipoMovimiento(1);
-            movimiento.setReferencia("Entrada de lote " + lote.getNumero_lote().trim());
-
-            ProductosDAO productosDAO = new ProductosDAO();
-            if (!productosDAO.procesarMovimiento(em, movimiento)
-                    || !productosDAO.movimientoInventario(em, movimiento)) {
-                throw new IllegalStateException("No se pudo registrar el movimiento de inventario");
-            }
-
-            em.getTransaction().commit();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
-            }
-            return false;
         } finally {
             em.close();
         }

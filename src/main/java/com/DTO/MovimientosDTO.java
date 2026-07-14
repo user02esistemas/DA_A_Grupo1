@@ -9,10 +9,6 @@ public class MovimientosDTO {
     private Integer cantidad;
     private Date fecha;
     private String referencia;
-    private String tipoMovimiento;
-    private String nombreProducto;
-
-    
 
     public MovimientosDTO() {
     }
@@ -71,22 +67,6 @@ public class MovimientosDTO {
 
     public void setFecha(Date fecha) {
         this.fecha = fecha;
-    }
-
-    public String getTipoMovimiento() {
-        return tipoMovimiento;
-    }
-
-    public void setTipoMovimiento(String tipoMovimiento) {
-        this.tipoMovimiento = tipoMovimiento;
-    }
-
-    public String getNombreProducto() {
-        return nombreProducto;
-    }
-
-    public void setNombreProducto(String nombreProducto) {
-        this.nombreProducto = nombreProducto;
     }
 
     

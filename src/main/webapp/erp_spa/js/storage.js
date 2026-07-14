@@ -28,6 +28,18 @@
 
     // 4. API Service Layer
     const api = {
+
+        getUsuarioId() {
+            if (state.user?.idUsuario) return state.user.idUsuario;
+            if (state.user?.id) return state.user.id;
+            try {
+                const sesionStorage = JSON.parse(localStorage.getItem('usuario_sesion') || 'null');
+                if (sesionStorage?.idUsuario) return sesionStorage.idUsuario;
+                if (sesionStorage?.id) return sesionStorage.id;
+            } catch (_) {}
+            return null;
+        },
+
         async login(username, password) {
             try {
                 const response = await fetch('UsuariosController?action=login', {
@@ -109,31 +121,11 @@
         },
         
         async saveLote(lote) {
-            try {
-                const response = await fetch('InventarioController?action=insertarLote', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        idProducto: lote.productId,
-                        lote: {
-                            numero_lote: lote.loteNumber,
-                            fecha_entrada: lote.dateIn,
-                            stock_lote: lote.stock
-                        }
-                    })
-                });
-
-                const result = await response.json();
-                if (!response.ok || !result.success) {
-                    throw new Error(result.error || 'No se pudo registrar el lote');
-                }
-
-                state.caches.products = await this.getProducts();
-                return result;
-            } catch (e) {
-                console.error('Error al guardar el lote:', e);
-                throw e;
-            }
+            await delay(100);
+            lote.id = Date.now();
+            MOCK_DB.lotes.push(lote);
+            saveDB();
+            return lote;
         },
         
         async uploadCertificateToLote(loteId, fileName) {
@@ -307,8 +299,21 @@
         },
         
         async getPurchases() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.purchases));
+            try {
+                
+                const response = await fetch('CompraController?action=listarCompras');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                return await response.json();
+
+
+            } catch (error) {
+                console.error('Error fetching compras:', error)
+                return[];
+            }
         },
         
         async savePurchase(compra) {
@@ -331,6 +336,59 @@
             }
         },
 
+        async getPurchaseById(idCompra) {
+            try {
+                const response = await fetch(`CompraController?action=obtenerCompra&idCompra=${idCompra}`);
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching compra por id:', error);
+                return null;
+            }
+        },
+
+        async getPendingPurchaseOrders(){
+            try {
+                
+                const response = await fetch('CompraController?action=ordenesPendientes');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching ordenes pendientes', error);
+                return[]
+            }
+        },
+
+        async getPurchaseOrderById(idOrden){
+            try {
+                const response = await fetch(`CompraController?action=listarOrden&idOrden=${idOrden}`);
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching orden por id:', error);
+                return null;
+            }
+        },
+
+        async rejectPurchaseOrder (idOrden, idEstado){
+            const response = await fetch(`CompraController?action=rechazarOrden&idOrden=${idOrden}&idEstado=${idEstado}`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error en el servidor: ${response.status}`);
+            }
+
+            return await response.json();
+        },
 
         async getPurchaseOrders() {
             try {
@@ -343,20 +401,27 @@
                 return await response.json();
 
             } catch (error) {
-                console.error('Error fetching ordenes de compra:', e);
+                console.error('Error fetching ordenes de compra:', error);
                 return[];
             }
         },
-        
+   
         async savePurchaseOrder(oc) {
-            await delay(300);
-            oc.id = Date.now();
-            oc.correlative = 'OC-' + String(ocCounter++).padStart(4, '0');
-            oc.status = 'PENDIENTE';
-            MOCK_DB.purchaseOrders.push(oc);
-            saveCounters();
-            saveDB();
-            return oc;
+           try {
+                const response = await fetch(`CompraController?action=insertarOrden`,{
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(oc)
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Error al procesar la orden de compra');
+                }
+           } catch (error) {
+            console.error('Error saving purchase:', error);
+            throw error;
+           }
         },
 
         async getInstallments() {
@@ -404,40 +469,31 @@
         },
 
         async getMovements(productId) {
+            if (!productId) {
+                console.error("Kardex Error: No se recibió un ID de producto válido.");
+                return [];
+            }
+            
             try {
-                const url = productId
-                    ? `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`
-                    : 'InventarioController?action=kardexGlobalHoy';
-
+                // Usamos la URL completa y verificamos los parámetros
+                const url = `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`;
                 const response = await fetch(url);
-
+                
                 if (!response.ok) {
+                    console.error("Respuesta del servidor no fue ok:", response.status);
                     throw new Error(`Error en el servidor: ${response.status}`);
                 }
-
-                const movimientos = await response.json();
-
-                return movimientos.map(m => ({
-                    id: m.idMovimiento,
-                    productId: m.idProducto,
-                    type: (m.idTipoMovimiento === 1 || m.idTipoMovimiento === 3)
-                        ? 'ENTRADA'
-                        : 'SALIDA',
-                    quantity: m.cantidad,
-                    date: m.fecha
-                        ? new Date(m.fecha).toLocaleString('es-PE')
-                        : '-',
-                    reason: m.referencia || '-'
-                }));
+                
+                return await response.json();
             } catch (e) {
-                console.error('Error al obtener movimientos:', e);
+                console.error('Error al obtener Kardex:', e);
                 return [];
             }
         },
 
         async getRecentMovements() {
             try {
-                const response = await fetch('InventarioController?action=kardexGlobalHoy');
+                const response = await fetch('InventarioController?action=movimientosRecientes');
                 if (!response.ok) throw new Error(`Error: ${response.status}`);
                 return await response.json();
             } catch (e) {

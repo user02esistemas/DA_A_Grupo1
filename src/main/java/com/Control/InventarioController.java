@@ -73,7 +73,7 @@ public class InventarioController extends HttpServlet {
                     }
                     break;
                     
-                case "kardexProductoID":
+                case "kardex":
                     String idProdParam = request.getParameter("idProducto");
 
                     if (idProdParam != null && !idProdParam.isEmpty() && !idProdParam.equals("undefined")) {
@@ -90,13 +90,6 @@ public class InventarioController extends HttpServlet {
                         out.print("{\"error\":\"ID Producto faltante\"}");
                     }
 
-                    break;
-
-                case "kardexGlobalHoy":
-                    List<MovimientosDTO> movimientosHoy =
-                            prodDAO.mostrarMovimientosGlobalesHoy();
-
-                    out.print(gson.toJson(movimientosHoy));
                     break;
 
                 default:
@@ -153,24 +146,6 @@ public class InventarioController extends HttpServlet {
                     response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                     out.print("{\"success\": false, \"error\": \"Error interno al insertar el producto en SQL Server\"}");
                 }
-            } else if (action.equals("insertarLote")) {
-                JsonObject jsonObject = gson.fromJson(request.getReader(), JsonObject.class);
-                if (jsonObject == null || !jsonObject.has("idProducto") || !jsonObject.has("lote")) {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    out.print("{\"success\": false, \"error\": \"Debe enviar el producto y los datos del lote\"}");
-                    return;
-                }
-
-                int idProducto = jsonObject.get("idProducto").getAsInt();
-                LotesDTO lote = gson.fromJson(jsonObject.get("lote"), LotesDTO.class);
-                boolean insertado = loteDAO.registrarEntradaLote(idProducto, lote);
-
-                if (insertado) {
-                    out.print("{\"success\": true, \"message\": \"Lote registrado y stock actualizado correctamente\"}");
-                } else {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    out.print("{\"success\": false, \"error\": \"No se pudo registrar el lote. Verifique sus datos y que el producto maneje lotes\"}");
-                }
             }else{
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"success\": false, \"error\": \"Acción POST no válida\"}");
@@ -196,4 +171,5 @@ public class InventarioController extends HttpServlet {
 
     }
 }
+
 

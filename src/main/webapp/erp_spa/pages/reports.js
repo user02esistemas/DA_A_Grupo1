@@ -430,18 +430,17 @@
     else if (state.selectedReportId === 'stock') {
         const totalItems = products.length;
         const totalPhysicalStock = products.reduce((sum, p) => sum + p.stock, 0);
-        const criticalItemsCount = products.filter(p => p.stock <= p.stock_minimo).length;
-        const totalValuation = products.reduce((sum, p) => sum + (p.stock * p.precio_venta), 0);
+        const criticalItemsCount = products.filter(p => p.stock <= p.minStock).length;
+        const totalValuation = products.reduce((sum, p) => sum + (p.stock * p.price), 0);
 
         const filteredProducts = products.filter(p => {
-            if (state.reportsFilter.category && state.reportsFilter.category !== 'Todos' && p.categoria?.nombreCategoria !== state.reportsFilter.category) return false;
-            if (state.reportsFilter.product && !(p.nombre_descripcion.toLowerCase().includes(state.reportsFilter.product.toLowerCase()) || String(p.codigo_unico || p.codigo_barras || p.id_producto).toLowerCase().includes(state.reportsFilter.product.toLowerCase()))) return false;
-            if (state.reportsFilter.stockBajo && p.stock > p.stock_minimo) return false;
+            if (state.reportsFilter.category && state.reportsFilter.category !== 'Todos' && p.category !== state.reportsFilter.category) return false;
+            if (state.reportsFilter.product && !(p.name.toLowerCase().includes(state.reportsFilter.product.toLowerCase()) || p.code.toLowerCase().includes(state.reportsFilter.product.toLowerCase()))) return false;
+            if (state.reportsFilter.stockBajo && p.stock > p.minStock) return false;
             return true;
         });
 
-        const categoryOptions = [...new Set(products.map(p => p.categoria?.nombreCategoria).filter(Boolean))]
-            .map(cat => `<option value="${cat}" ${state.reportsFilter.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
+        const categoryOptions = MOCK_DB.categories.map(cat => `<option value="${cat}" ${state.reportsFilter.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
 
         subHtml = `
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
@@ -500,17 +499,17 @@
                             if (p.stock == null || p.stock === 0) {
                                 statusText = 'Crítico';
                                 badgeClass = 'bg-red-500/20 text-red-400 border border-red-500/30';
-                            } else if (p.stock <= p.stock_minimo) {
+                            } else if (p.stock <= p.minStock) {
                                 statusText = 'Bajo';
                                 badgeClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
                             }
                             return `
                                 <tr>
-                                    <td class="p-3 font-mono text-[#F8FAFC]">${p.codigo_unico || p.codigo_barras || p.id_producto}</td>
-                                    <td class="p-3 font-bold text-[#F8FAFC]">${p.nombre_descripcion}</td>
-                                    <td class="p-3 text-[#CBD5E1]">${p.categoria?.nombreCategoria || '-'}</td>
-                                    <td class="p-3 font-bold ${p.stock <= p.stock_minimo ? 'text-red-400':'text-[#F8FAFC]'}">${p.stock} ${p.unidad?.nombre || ''}</td>
-                                    <td class="p-3 text-[#CBD5E1]">${p.stock_minimo} ${p.unidad?.nombre || ''}</td>
+                                    <td class="p-3 font-mono text-[#F8FAFC]">${p.code}</td>
+                                    <td class="p-3 font-bold text-[#F8FAFC]">${p.name}</td>
+                                    <td class="p-3 text-[#CBD5E1]">${p.category}</td>
+                                    <td class="p-3 font-bold ${p.stock <= p.minStock ? 'text-red-400':'text-[#F8FAFC]'}">${p.stock} ${p.unit}</td>
+                                    <td class="p-3 text-[#CBD5E1]">${p.minStock} ${p.unit}</td>
                                     <td class="p-3">
                                         <span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">${statusText}</span>
                                     </td>

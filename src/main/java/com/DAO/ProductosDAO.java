@@ -196,8 +196,6 @@ public class ProductosDAO {
                     prod.setLote(lote);
                 }
 
-                prod.setStock_minimo(((Number) fila[15]).intValue());
-
                 prodList.add(prod);
             }
             
@@ -497,42 +495,6 @@ public int obtenerOCrearCertificado(EntityManager em, CertificadosDTO certi) {
             em.close();
         }
         return listaKardex;
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<MovimientosDTO> mostrarMovimientosGlobalesHoy() {
-        EntityManager em = emf.createEntityManager();
-        List<MovimientosDTO> movimientos = new ArrayList<>();
-
-        String sql = """
-                SELECT id_movimiento, TM.nombre AS Movimiento, PD.nombre_descripcion as Producto, cantidad, fecha, referencia
-                FROM movimientos_inventario as MI
-				INNER JOIN productos as PD on MI.id_producto = PD.id_producto
-				INNER JOIN tipos_movimiento AS TM ON MI.id_tipo_movimiento = TM.id_tipo_movimiento
-				WHERE CAST(fecha AS DATE) = CAST(GETDATE() AS DATE);
-                """;
-
-        try {
-            List<Object[]> resultado = em.createNativeQuery(sql).getResultList();
-
-            for (Object[] fila : resultado) {
-                MovimientosDTO mov = new MovimientosDTO();
-                mov.setIdMovimiento(((Number) fila[0]).intValue());
-                mov.setTipoMovimiento((String) fila[1]);
-                mov.setNombreProducto((String) fila[2]);
-                mov.setCantidad(((Number) fila[3]).intValue());
-                mov.setFecha((java.util.Date) fila[4]);
-                mov.setReferencia((String) fila[5]);
-
-                movimientos.add(mov);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            em.close();
-        }
-
-        return movimientos;
     }
 
 

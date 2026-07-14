@@ -1,27 +1,26 @@
 ﻿async function renderMovimientos(c) {
-    const movs = await api.getRecentMovements();
-    const rows = movs.sort((a, b) => b.idMovimiento - a.idMovimiento).map(m => {
-        const tipo = (m.tipoMovimiento || 'SIN TIPO').toUpperCase();
-        const isEntrada = tipo === 'ENTRADA';
-        const isSalida = tipo === 'SALIDA';
-        const badgeColor = isEntrada ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : isSalida ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
-        const dotColor = isEntrada ? 'bg-emerald-500' : isSalida ? 'bg-red-500' : 'bg-amber-500';
-        const sign = isEntrada ? '+' : isSalida ? '-' : '';
-        const qtyColor = isEntrada ? 'text-emerald-400' : isSalida ? 'text-red-400' : 'text-amber-400';
-        const fecha = m.fecha ? new Date(m.fecha).toLocaleString('es-PE') : '-';
+    const movs = await api.getMovements();
+    const prods = await api.getProducts();
+    const rows = movs.sort((a,b)=>b.id-a.id).map(m => {
+        const p = prods.find(x=>x.id===m.productId);
+        const isEntrada = m.type === 'ENTRADA';
+        const badgeColor = isEntrada ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30';
+        const dotColor = isEntrada ? 'bg-emerald-500' : 'bg-red-500';
+        const sign = isEntrada ? '+' : '-';
+        const qtyColor = isEntrada ? 'text-emerald-400' : 'text-red-400';
         
         return `
             <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0">
-                <td class="p-4 whitespace-nowrap text-[#CBD5E1] font-mono text-xs">${fecha}</td>
+                <td class="p-4 whitespace-nowrap text-[#CBD5E1] font-mono text-xs">${m.date}</td>
                 <td class="p-4 whitespace-nowrap">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${badgeColor}">
                         <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
-                        ${tipo}
+                        ${m.type}
                     </span>
                 </td>
-                <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-semibold">${m.nombreProducto || 'Producto eliminado'}</td>
-                <td class="p-4 whitespace-nowrap font-black text-lg ${qtyColor}">${sign}${m.cantidad}</td>
-                <td class="p-4 text-[#CBD5E1]">${m.referencia || '-'}</td>
+                <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-semibold">${p?p.name:'Desc'}</td>
+                <td class="p-4 whitespace-nowrap font-black text-lg ${qtyColor}">${sign}${m.quantity}</td>
+                <td class="p-4 text-[#CBD5E1]">${m.reason}</td>
             </tr>
         `;
     }).join('');
