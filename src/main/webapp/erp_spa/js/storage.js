@@ -1,5 +1,4 @@
-﻿
-    const STORAGE_KEY = 'DELGADO_ERP_MOCK_DB';
+const STORAGE_KEY = 'DELGADO_ERP_MOCK_DB';
 
     let MOCK_DB = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!MOCK_DB) {
@@ -28,6 +27,18 @@
 
     // 4. API Service Layer
     const api = {
+
+        getUsuarioId() {
+            if (state.user?.idUsuario) return state.user.idUsuario;
+            if (state.user?.id) return state.user.id;
+            try {
+                const sesionStorage = JSON.parse(localStorage.getItem('usuario_sesion') || 'null');
+                if (sesionStorage?.idUsuario) return sesionStorage.idUsuario;
+                if (sesionStorage?.id) return sesionStorage.id;
+            } catch (_) {}
+            return null;
+        },
+
         async login(username, password) {
             try {
                 const response = await fetch('UsuariosController?action=login', {
@@ -262,10 +273,47 @@
             }
         },
         
-        async deleteEntity(id) {
-            await delay(100);
-            MOCK_DB.entities = MOCK_DB.entities.filter(e => e.id !== id);
-            saveDB();
+        // modi: POST con action=eliminar al backend xd
+        async deleteEntity(idEntidad) {
+            try {
+                const response = await fetch('EntidadesController?action=eliminar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idEntidad: parseInt(idEntidad) })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                // Sincronizamos y actualizamos la caché local
+                state.caches.entities = await this.getEntities();
+                return true;
+            } catch (error) {
+                console.error('Error deleting entity:', error);
+                throw new Error('No se pudo eliminar la entidad. Intente nuevamente.');
+            }
+        },
+
+        // Agreg: deleteUser petición aPOST con action=eliminar al backend
+        async deleteUser(idUsuario) {
+            try {
+                const response = await fetch('UsuariosController?action=eliminar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idUsuario: parseInt(idUsuario) })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                // sincronizamos y actualizamos la cacheL usu
+                state.caches.users = await this.getUsers();
+                return true;
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                throw new Error('No se pudo inhabilitar al usuario. Intente nuevamente.');
+            }
         },
         
         async saveSale(venta) {
@@ -287,8 +335,21 @@
         },
         
         async getPurchases() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.purchases));
+            try {
+                
+                const response = await fetch('CompraController?action=listarCompras');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                return await response.json();
+
+
+            } catch (error) {
+                console.error('Error fetching compras:', error)
+                return[];
+            }
         },
         
         async savePurchase(compra) {
@@ -311,21 +372,92 @@
             }
         },
 
+        async getPurchaseById(idCompra) {
+            try {
+                const response = await fetch(`CompraController?action=obtenerCompra&idCompra=${idCompra}`);
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching compra por id:', error);
+                return null;
+            }
+        },
+
+        async getPendingPurchaseOrders(){
+            try {
+                
+                const response = await fetch('CompraController?action=ordenesPendientes');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching ordenes pendientes', error);
+                return[]
+            }
+        },
+
+        async getPurchaseOrderById(idOrden){
+            try {
+                const response = await fetch(`CompraController?action=listarOrden&idOrden=${idOrden}`);
+                if (!response.ok) {
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching orden por id:', error);
+                return null;
+            }
+        },
+
+        async rejectPurchaseOrder (idOrden, idEstado){
+            const response = await fetch(`CompraController?action=rechazarOrden&idOrden=${idOrden}&idEstado=${idEstado}`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error en el servidor: ${response.status}`);
+            }
+
+            return await response.json();
+        },
 
         async getPurchaseOrders() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.purchaseOrders));
+            try {
+                const response = await fetch('CompraController?action=listarOrdenes');
+
+                if(!response.ok){
+                    throw new Error(`Error en el servidor: ${response.status}`);
+                }
+
+                return await response.json();
+
+            } catch (error) {
+                console.error('Error fetching ordenes de compra:', error);
+                return[];
+            }
         },
-        
+   
         async savePurchaseOrder(oc) {
-            await delay(300);
-            oc.id = Date.now();
-            oc.correlative = 'OC-' + String(ocCounter++).padStart(4, '0');
-            oc.status = 'PENDIENTE';
-            MOCK_DB.purchaseOrders.push(oc);
-            saveCounters();
-            saveDB();
-            return oc;
+           try {
+                const response = await fetch(`CompraController?action=insertarOrden`,{
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(oc)
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Error al procesar la orden de compra');
+                }
+           } catch (error) {
+            console.error('Error saving purchase:', error);
+            throw error;
+           }
         },
 
         async getInstallments() {
@@ -379,7 +511,6 @@
             }
             
             try {
-                // Usamos la URL completa y verificamos los parámetros
                 const url = `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`;
                 const response = await fetch(url);
                 
