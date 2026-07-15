@@ -1,3 +1,5 @@
+#----persistencia----
+src/main/resources/META-INF/persistence.xml
 # --- Maven Build Outputs ---
 target/
 *.jar
