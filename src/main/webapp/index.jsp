@@ -62,10 +62,10 @@
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
 
-    <script src="<%= request.getContextPath() %>/erp_spa/js/storage.js"></script>
     <script src="<%= request.getContextPath() %>/erp_spa/js/utils.js"></script>
     <script src="<%= request.getContextPath() %>/erp_spa/js/router.js"></script>
-
+    
+    <script src="<%= request.getContextPath() %>/erp_spa/js/storage.js"></script>
 
     <script src="<%= request.getContextPath() %>/erp_spa/components/modal.js"></script>
     <script src="<%= request.getContextPath() %>/erp_spa/components/sidebar.js"></script>

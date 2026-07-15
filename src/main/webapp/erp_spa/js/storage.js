@@ -1,28 +1,23 @@
-﻿
-    const STORAGE_KEY = 'DELGADO_ERP_MOCK_DB';
+﻿    const STORAGE_KEY = 'DELGADO_ERP_MOCK_DB';
 
     let MOCK_DB = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
     if (!MOCK_DB) {
-        MOCK_DB = JSON.parse(JSON.stringify(SEED_DB));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DB));
+        MOCK_DB = {};
     }
+
+    if (!MOCK_DB.exchangeRates) {
+        MOCK_DB.exchangeRates = [
+            { id: 1, from: 'USD', to: 'PEN', rate: 3.75, date: '2026-06-01', status: 'Activo' }
+        ];
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DB));
 
     function saveDB() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_DB));
     }
 
-
-    let boletaCounter = parseInt(localStorage.getItem('boletaCounter')) || 1;
-    let facturaCounter = parseInt(localStorage.getItem('facturaCounter')) || 1;
-    let proformaCounter = parseInt(localStorage.getItem('proformaCounter')) || 1;
-    let ocCounter = parseInt(localStorage.getItem('ocCounter')) || 1;
-
-    function saveCounters() {
-        localStorage.setItem('boletaCounter', boletaCounter);
-        localStorage.setItem('facturaCounter', facturaCounter);
-        localStorage.setItem('proformaCounter', proformaCounter);
-        localStorage.setItem('ocCounter', ocCounter);
-    }
 
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
@@ -104,9 +99,7 @@
         },
         
         async deleteProduct(id) {
-            await delay(100);
-            MOCK_DB.products = MOCK_DB.products.filter(p => p.id !== id);
-            saveDB();
+           
         },
         
         async getLotes(productId) {
@@ -121,21 +114,11 @@
         },
         
         async saveLote(lote) {
-            await delay(100);
-            lote.id = Date.now();
-            MOCK_DB.lotes.push(lote);
-            saveDB();
-            return lote;
+            
         },
         
         async uploadCertificateToLote(loteId, fileName) {
-            await delay(300);
-            const lote = MOCK_DB.lotes.find(l => l.id === loteId);
-            if (lote) {
-                lote.hasCert = true;
-                lote.certificateName = fileName;
-                saveDB();
-            }
+            
         },
         
         //Llamamos al Servlet para que pase la lista
@@ -275,9 +258,7 @@
         },
         
         async deleteEntity(id) {
-            await delay(100);
-            MOCK_DB.entities = MOCK_DB.entities.filter(e => e.id !== id);
-            saveDB();
+            
         },
         
         async saveSale(venta) {
@@ -425,8 +406,7 @@
         },
 
         async getInstallments() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.installments));
+           return [];
         },
         
         async paySaleInstallments(saleId, amount) {
@@ -455,27 +435,16 @@
         },
         
         async payInstallment(id) {
-            await delay(100);
-            const inst = MOCK_DB.installments.find(i => i.id === id);
-            if (inst) {
-                inst.status = 'Pagado';
-                saveDB();
-            }
+            
         },
 
         async getSales() {
-            await delay(50);
-            return JSON.parse(JSON.stringify(MOCK_DB.sales));
+            return [];
         },
 
-        async getMovements(productId) {
-            if (!productId) {
-                console.error("Kardex Error: No se recibió un ID de producto válido.");
-                return [];
-            }
-            
+        async getMovements(productId) {            
             try {
-                // Usamos la URL completa y verificamos los parámetros
+                
                 const url = `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`;
                 const response = await fetch(url);
                 
@@ -518,34 +487,7 @@
         },
         
         async processNotaCredito(nc) {
-            await delay(200);
-            nc.id = Date.now();
             
-            const sale = MOCK_DB.sales.find(s => s.id === nc.saleId);
-            if (sale) {
-                sale.total -= nc.totalRefunded;
-                if (sale.total <= 0) sale.status = 'Anulado';
-                else sale.status = 'Devolución Parcial';
-            }
-            
-            nc.returnedItems.forEach(item => {
-                const prod = MOCK_DB.products.find(p => p.id === item.productId);
-                if (prod) {
-                    prod.stock += item.quantity;
-                    MOCK_DB.inventoryMovements.push({
-                        id: Date.now() + Math.random(),
-                        date: nc.date,
-                        type: 'ENTRADA',
-                        productId: prod.id,
-                        quantity: item.quantity,
-                        reason: `Nota Crédito #${nc.id} (Ref: ${sale ? sale.correlative : nc.saleId})`
-                    });
-                }
-            });
-
-            MOCK_DB.notasCredito.push(nc);
-            saveDB();
-            return nc;
         }
     };
 
@@ -586,13 +528,7 @@
         }
     };
 
-    // Expose MOCK_DB and SEED_DB globally for troubleshooting/console reset
-    window.MOCK_DB = MOCK_DB;
-    window.resetStorage = () => {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem('boletaCounter');
-        localStorage.removeItem('facturaCounter');
-        localStorage.removeItem('proformaCounter');
-        localStorage.removeItem('ocCounter');
-        location.reload();
-    };
+window.MOCK_DB = MOCK_DB;
+window.saveDB = saveDB;
+
+    
