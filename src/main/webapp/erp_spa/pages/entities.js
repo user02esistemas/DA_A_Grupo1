@@ -1,4 +1,4 @@
-﻿async function renderEntidades(c) {
+async function renderEntidades(c) {
     state.caches.entities = await api.getEntities();
     
     c.innerHTML = `
@@ -15,7 +15,6 @@
         </div>
 
         <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden" data-aos="fade-up">
-            <!-- Toolbar de Filtros -->
             <div class="p-4 border-b border-[#334155] bg-[#111827]">
                 <div class="relative max-w-xl w-full mb-4">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -43,7 +42,6 @@
                 </div>
             </div>
 
-            <!-- Tabla -->
             <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -82,9 +80,7 @@ window.updateEntitiesTable = function() {
     const listaOriginal = state.caches.entities || [];
     
     const filtered = listaOriginal.filter(e => {
-
         const tipoTexto = (e.nombreTipoEntidad || '').toUpperCase();
-
 
         const matchType = f.type === 'Todos' || tipoTexto === f.type;
         const matchDoc = f.docType === 'Todos' || (e.tipoDocumento || '') === f.docType;
@@ -98,7 +94,6 @@ window.updateEntitiesTable = function() {
     });
 
     tbody.innerHTML = filtered.map(e => {
-
         const tipoTexto = (e.nombreTipoEntidad || '').toUpperCase();
 
         let typeColor = 'bg-[#1F2937] text-[#CBD5E1] border border-[#334155]';
@@ -138,10 +133,10 @@ window.updateEntitiesTable = function() {
                         <i class="bi bi-clock-history text-lg"></i>
                     </button>
                 ` : ''}
-                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.id})">
+                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.idEntidad})">
                     <i class="bi bi-pencil-square text-lg"></i>
                 </button>
-                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Eliminar" onclick="deleteEntity(${e.id})">
+                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Eliminar" onclick="deleteEntity(${e.idEntidad})">
                     <i class="bi bi-trash3 text-lg"></i>
                 </button>
             </td>
@@ -157,7 +152,7 @@ window.updateEntitiesTable = function() {
 window.deleteEntity = async (id) => {
     const result = await Swal.fire({
         title: '¿Eliminar entidad?',
-        text: "Esta acción no se puede deshacer.",
+        text: "Esta acción inhabilitará el registro de forma lógica.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -168,8 +163,25 @@ window.deleteEntity = async (id) => {
     });
     
     if(result.isConfirmed) {
-        await api.deleteEntity(id);
-        renderEntidades(document.getElementById('main-area'));
+        try {
+            await api.deleteEntity(id);
+            Swal.fire({
+                title: '¡Eliminado!',
+                text: 'La entidad ha sido inhabilitada con éxito.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-2xl' }
+            });
+            renderEntidades(document.getElementById('main-area'));
+        } catch (error) {
+            Swal.fire({
+                title: 'Error',
+                text: error.message,
+                icon: 'error',
+                customClass: { popup: 'rounded-2xl' }
+            });
+        }
     }
 };
 
@@ -224,21 +236,21 @@ window.openEntityModal = async(id = null) => {
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Número de Documento</label>
-                        <input type="text" id="ent-doc" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.numeroDocumento}" required>
+                        <input type="text" id="ent-doc" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.numeroDocumento || ''}" required>
                         <p class="text-xs text-red-500 mt-1 hidden" id="ent-doc-error"></p>
                     </div>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre o Razón Social</label>
-                    <input type="text" id="ent-name" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.nombre_RazonSocial}" required>
+                    <input type="text" id="ent-name" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.nombre_RazonSocial || ''}" required>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-geo-alt"></i></div>
-                        <input type="text" id="ent-addr" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.direccion}">
+                        <input type="text" id="ent-addr" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.direccion || ''}">
                     </div>
                 </div>
                 
@@ -247,14 +259,14 @@ window.openEntityModal = async(id = null) => {
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-telephone"></i></div>
-                            <input type="tel" id="ent-phone" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.telefono}">
+                            <input type="tel" id="ent-phone" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.telefono || ''}">
                         </div>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Email</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-envelope"></i></div>
-                            <input type="email" id="ent-email" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.email}">
+                            <input type="email" id="ent-email" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.email || ''}">
                         </div>
                     </div>
                 </div>
@@ -317,10 +329,10 @@ window.openEntityModal = async(id = null) => {
             telefono: document.getElementById('ent-phone').value,
             email: document.getElementById('ent-email').value
         };
-        const guardadoExitoso =await api.saveEntity(entidadDTO);
+        
+        const guardadoExitoso = await api.saveEntity(entidadDTO);
 
         if(guardadoExitoso){
-
             Swal.fire({
                 title: '¡Operación Exitosa!',
                 text: `La entidad ha sido ${idValue ? 'actualizada' : 'registrada'} correctamente.`,
@@ -339,7 +351,6 @@ window.openEntityModal = async(id = null) => {
                 customClass: { popup: 'rounded-2xl' }
             });
         }
-        
     });
 };
 
