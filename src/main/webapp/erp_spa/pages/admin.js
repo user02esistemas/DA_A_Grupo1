@@ -1,4 +1,4 @@
-﻿async function renderAdmin(c) {
+async function renderAdmin(c) {
     state.caches.users = await api.getUsers();
     
     const rows = state.caches.users.map(u => `
@@ -17,9 +17,12 @@
                     ${u.nombreEstado || 'Desconocido'}
                 </span>
             </td>
-            <td class="p-4 whitespace-nowrap text-right">
-                <button class="p-2 text-[#CBD5E1] hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors" onclick="openUserModal(${u.idUsuario})">
+            <td class="p-4 whitespace-nowrap text-right flex justify-end gap-1">
+                <button class="p-2 text-[#CBD5E1] hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors" title="Editar" onclick="openUserModal(${u.idUsuario})">
                     <i class="bi bi-pencil-square text-lg"></i>
+                </button>
+                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar" onclick="deleteUser(${u.idUsuario})">
+                    <i class="bi bi-trash3 text-lg"></i>
                 </button>
             </td>
         </tr>
@@ -53,7 +56,6 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" data-aos="fade-up">
-            <!-- Admin Users -->
             <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden">
                 <div class="p-4 border-b border-[#334155] bg-[#111827] flex justify-between items-center">
                     <h3 class="font-bold text-[#F8FAFC]">Administración de Usuarios</h3>
@@ -80,7 +82,6 @@
                 </div>
             </div>
 
-            <!-- Admin Exchange Rates -->
             <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden">
                 <div class="p-4 border-b border-[#334155] bg-[#111827] flex justify-between items-center">
                     <h3 class="font-bold text-[#F8FAFC]">Tipos de Cambio</h3>   
@@ -145,8 +146,8 @@ window.openUserModal = async (id = null) => {
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre Real (Trabajador)</label>
                     <input type="text" id="u-entidad-buscar" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" 
                     value="${u.nombreEntidad}"  
-                    placeholder="Busacar nombre o DNI ..."
-                    autocomplete = "off" required ${id ? 'disable' : ''}>
+                    placeholder="Buscar nombre o DNI ..."
+                    autocomplete = "off" required ${id ? 'disabled' : ''}>
 
                     <div id="u-entidad-resultado" class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg hidden max-h-40 overflow-y-auto">
                     </div>
@@ -154,7 +155,7 @@ window.openUserModal = async (id = null) => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre de Usuario</label>
-                        <input type="text" id="u-username" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${u.username}" required placeholder="Ej. jperez">
+                        <input type="text" id="u-username" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${u.usuario || ''}" required placeholder="Ej. jperez">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña</label>
@@ -165,7 +166,7 @@ window.openUserModal = async (id = null) => {
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Rol</label>
                         <select id="u-role" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5">
-                            <option value="" ${!u.idRole ? 'selected' : ''} disable>
+                            <option value="" ${!u.idRole ? 'selected' : ''} disabled>
                                 Seleccione Rol ...
                             </option>
                             
@@ -199,7 +200,6 @@ window.openUserModal = async (id = null) => {
     }
     
     const trabajadores = state.caches.entities.filter(e => (e.nombreTipoEntidad || '').toUpperCase() === 'TRABAJADOR');
-
 
     busqueda.addEventListener('input', (e) =>{
         const term = e.target.value.toLowerCase().trim();
@@ -281,26 +281,71 @@ window.openUserModal = async (id = null) => {
         const originalText = btnSubmit.innerHTML;
         
        try {
-            
             btnSubmit.innerHTML = 'Guardando...';
             btnSubmit.disabled = true;
 
-            
             await api.saveUser(usuarioDTO);
-            
             closeModal();
             
-            alert('Usuario guardado exitosamente.');
+            Swal.fire({
+                title: '¡Operación Exitosa!',
+                text: 'Usuario guardado correctamente.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-2xl' }
+            });
             
             if (typeof window.renderAdmin === 'function') {
                 window.renderAdmin(document.getElementById('main-area') || c); 
             }
         } catch (error) {
-            alert(error.message);
+            Swal.fire({
+                title: 'Error',
+                text: error.message,
+                icon: 'error',
+                customClass: { popup: 'rounded-2xl' }
+            });
             btnSubmit.innerHTML = originalText;
             btnSubmit.disabled = false;
         }
     };
+};
+
+window.deleteUser = async (idUsuario) => {
+    const result = await Swal.fire({
+        title: '¿Inhabilitar usuario?',
+        text: "El usuario ya no podrá ingresar al sistema.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, inhabilitar',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'rounded-2xl' }
+    });
+    
+    if(result.isConfirmed) {
+        try {
+            await api.deleteUser(idUsuario);
+            Swal.fire({
+                title: '¡Completado!',
+                text: 'El usuario ha sido inhabilitado.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false,
+                customClass: { popup: 'rounded-2xl' }
+            });
+            renderAdmin(document.getElementById('main-area'));
+        } catch (error) {
+            Swal.fire({
+                title: 'Error',
+                text: error.message,
+                icon: 'error',
+                customClass: { popup: 'rounded-2xl' }
+            });
+        }
+    }
 };
 
 window.openExchangeRateModal = (id = null) => {
@@ -384,7 +429,7 @@ window.openExchangeRateModal = (id = null) => {
             MOCK_DB.exchangeRates.unshift(erData);
         }
         
-        // Save database state
+       
         localStorage.setItem('DELGADO_ERP_MOCK_DB', JSON.stringify(MOCK_DB));
         closeModal();
         if (typeof window.renderLayout === 'function') window.renderLayout();
