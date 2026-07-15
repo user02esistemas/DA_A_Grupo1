@@ -1,6 +1,8 @@
-﻿// =========================================================
+
+// =========================================================
 // 1. FUNCIONES AUXILIARES GLOBALES
 // =========================================================
+
 function comboHtml(id, placeholder) {
     return `
         <div class="relative">
@@ -40,9 +42,11 @@ function setupCombo(id, items, onSelect) {
 
     input.addEventListener('focus', () => renderList(input.value));
     input.addEventListener('input', () => {
+
         // Cualquier edición de texto invalida el id seleccionado, para
         // evitar que se guarde un id "viejo" que ya no corresponde al
         // texto visible (bug que tenía la versión anterior).
+
         hidden.value = '';
         renderList(input.value);
     });
@@ -99,57 +103,21 @@ function isThisMonth(d) {
     return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
 }
 
-
-function getOrderProviderId(o) {
-    return o.providerId ?? o.proveedorId ?? o.proveedor?.idEntidad ?? null;
-}
-function getOrderCorrelative(o) {
-    return o.correlative ?? o.correlativo ?? o.numero ?? '';
-}
-function getOrderTotal(o) {
-    return o.estimatedTotal ?? o.totalEstimado ?? 0;
-}
-function getOrderItems(o) {
-    return o.items ?? o.detalles ?? [];
-}
-function getOrderDate(o) {
-    return o.date ?? o.fecha ?? o.fechaEntrega ?? '';
-}
-
-function getPurchaseProviderId(p) {
-    return p.providerId ?? p.proveedorId ?? p.proveedor?.idEntidad ?? null;
-}
-function getPurchaseInvoice(p) {
-    return p.nroFactura ?? p.numeroFactura ?? '';
-}
-function getPurchaseTotal(p) {
-    return p.total ?? 0;
-}
-function getPurchaseItems(p) {
-    return p.items ?? p.detalles ?? [];
-}
-function getPurchaseDate(p) {
-    return p.date ?? p.fecha ?? '';
-}
-
-function getItemProductId(i) {
-    return i.productId ?? i.idProducto ?? i.producto?.id_producto ?? null;
-}
 function getItemCantidad(i) {
-    return i.cantidadPedida ?? i.cantidad ?? 0;
+    return i.dto.cantidadPedida ?? i.dto.cantidad ?? 0;
 }
 function getItemCosto(i) {
-    return i.precio_costo_unitario ?? i.precioUnitarioPactado ?? 0;
+    return i.dto.precio_costo_unitario ?? i.dto.precioUnitarioPactado ?? 0;
 }
-function getItemLote(i) {
-    return i.loteNumber ?? i.numeroLote ?? i.lote ?? null;
-}
+
+
 
 function statusBadge(status) {
     const map = {
         PENDIENTE: ['bg-amber-500/20 text-amber-400 border border-amber-500/30', 'bg-amber-500'],
         APROBADA: ['bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', 'bg-emerald-500'],
-        RECHAZADA: ['bg-red-500/20 text-red-400 border border-red-500/30', 'bg-red-500']
+        CANCELADA: ['bg-red-500/20 text-red-400 border border-red-500/30', 'bg-red-500']
+
     };
     const [b, dot] = map[status] || map.PENDIENTE;
     return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${b}"><span class="w-1.5 h-1.5 rounded-full ${dot}"></span>${status}</span>`;
@@ -175,9 +143,11 @@ function renderFilterableTable({ tbodyId, data, search, matches, expandedSet, em
     }).join('');
 }
 
-// =========================================================
-// 2. MODAL REGISTRAR COMPRA (Global e Independiente)
-// =========================================================
+
+// ===========================
+// 2. MODAL REGISTRAR COMPRA 
+// ============================
+
 window.openCompraModal = () => {
     window.compraModalState = {
         tempItems: [],
@@ -276,7 +246,9 @@ window.openCompraModal = () => {
     const cLoteInput = document.getElementById('c-lote');
     const cCostInput = document.getElementById('c-cost');
 
-    setupCombo('c-order-link', window.comprasContext?.ocItems || [], () => window.linkOCModal(window.comprasContext.ordersRef || [], window.comprasContext.prodsRef || []));
+
+    setupCombo('c-order-link', window.comprasContext?.ocItems || [], () => window.linkOCModal());
+
     setupCombo('c-prov', window.comprasContext?.proveedoresItems || []);
     setupCombo('c-prod', window.comprasContext?.productosItems || [], (item) => {
         window.compraModalState.currentProduct = item;
@@ -298,26 +270,35 @@ window.openCompraModal = () => {
         const ocId = document.getElementById('c-order-link').value;
         if (!ocId) return;
 
-        const ocCompleta = api.getPurchaseOrderById ? await api.getPurchaseOrderById(ocId) : orders.find(o => String(o.id) === String(ocId));
+
+        const ocCompleta = await api.getPurchaseOrderById(ocId)
         if (!ocCompleta) return;
 
-        const providerId = getOrderProviderId(ocCompleta);
+        const providerId = ocCompleta.proveedor.idEntidad;  
+
         const provItem = window.comprasContext.proveedoresItems.find(p => p.id === providerId);
         document.getElementById('c-prov').value = providerId ?? '';
         if (provItem) document.getElementById('c-prov-input').value = provItem.label;
 
-        window.compraModalState.tempItems = getOrderItems(ocCompleta).map(i => {
-            const prodId = getItemProductId(i);
-            const prodInfo = prods.find(p => p.id_producto === prodId);
+
+        window.compraModalState.tempItems = ocCompleta.detalles.map(i => {
+            const prodId = i.producto.id_producto;
+            const cantidad = i.cantidadPedida;
+            const costo = i.precioUnitarioPactado;
             return {
-                productId: prodId,
-                quantity: getItemQuantity(i),
-                cost: getItemCost(i),
-                costoOriginal: getItemCost(i),
+
+                 dto: {
+                    producto: { id_producto: prodId },
+                    lote: { numero_lote: null },
+                    cantidad: cantidad,
+                    precio_costo_unitario: costo
+                },
+                costoOriginal: costo,
                 monedaOriginal: 'S/',
-                name: i.name || i.nombre || (prodInfo ? prodInfo.nombre_descripcion : `Producto #${prodId}`),
-                manejaLote: prodInfo ? !!prodInfo.maneja_lote : false,
-                loteNumber: null
+                nombre: i.producto.nombre_descripcion,
+                manejaLote: !!i.producto.maneja_lote,
+                subTotal: cantidad * costo,
+
             };
         });
         renderCompraTable();
@@ -406,7 +387,9 @@ window.openCompraModal = () => {
             return Swal.fire('Error', 'La tabla de compra está vacía.', 'error');
         }
 
-        const faltanLotes = window.compraModalState.tempItems.some(i => i.dto.manejaLote && !i.dto.lote.loteNumber);
+
+        const faltanLotes = window.compraModalState.tempItems.some(i => i.manejaLote && !i.dto.lote.numero_lote);
+
         if (faltanLotes) {
             btn.disabled = false;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -416,6 +399,10 @@ window.openCompraModal = () => {
 
         try {
             
+
+            const calculado = sumItemsTotal(window.compraModalState.tempItems);
+            console.log("Monto Total a enviar:", calculado);
+
             await api.savePurchase({
                 orden:{
                     idOrden: parseInt(document.getElementById('c-order-link').value) || null
@@ -518,7 +505,7 @@ window.openOCModal = () => {
                 <div class="flex justify-between items-center pt-4 border-t border-slate-100">
                     <div>
                         <span class="text-xs text-slate-500 uppercase tracking-wide block">Total Estimado (Soles)</span>
-                        <span class="text-2xl font-bold text-slate-800" id="oc-total">S/ 0.00</span>
+                        <span class="text-2xl font-bold text-slate-800" id="oc-total">$S/ 0.00</span>
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors" onclick="closeModal()">Cancelar</button>
@@ -599,8 +586,7 @@ window.openOCModal = () => {
         try {
             await api.savePurchaseOrder({
                 proveedor: { idEntidad: parseInt(document.getElementById('oc-prov').value) },
-                usuario: { idUsuario: state.user ? state.user.idUsuario : null },
-                fecha: new Date().toISOString(),
+                usuario: { idUsuario: api.getUsuarioId()},
                 fechaEntrega: document.getElementById('oc-date').value,
                 totalEstimado: sumItemsTotal(window.tempOCItems),
                 detalles: window.tempOCItems.map(i => i.dto)
@@ -626,11 +612,14 @@ window.openOCModal = () => {
 // 4. VISTA PRINCIPAL (renderCompras)
 // =========================================================
 async function renderCompras(c) {
-    const [entidades, productos, compras, ordenes] = await Promise.all([
+
+    const [entidades, productos, compras, ordenes, ordenesPendientesLista] = await Promise.all([
         api.getEntities(),
         api.getProducts(),
         api.getPurchases(),
-        api.getPurchaseOrders()
+        api.getPurchaseOrders(),
+        api.getPendingPurchaseOrders()
+
     ]);
 
     const proveedores = entidades.filter(entidad => entidad.nombreTipoEntidad === 'PROVEEDOR');
@@ -647,22 +636,25 @@ async function renderCompras(c) {
         manejaLote: !!producto.maneja_lote
     }));
 
-    const ordenesPendientes = ordenes.filter(o => o.status === 'PENDIENTE');
 
-    const ocItems = ordenesPendientes.map(o => {
-        
+    const ordenesPendientes = ordenes.filter(o => o.estado?.nombreEstado === 'PENDIENTE');
+
+    const ocItems = ordenesPendientesLista.map(o => {    
         return {
-            label: `${o.proveedor.nombre_RazonSocial}`,
-            searchText: `${o.proveedor.nombre_RazonSocial}`
+            id: o.idOrden,
+            label: `OC ${o.idOrden} - ${o.proveedor.nombre_RazonSocial}`,
+            searchText: `${o.idOrden}  ${o.proveedor.nombre_RazonSocial}`
+
         };
     });
 
    
     window.comprasContext = { proveedoresItems, productosItems, ocItems, ordersRef: ordenes, prodsRef: productos };
 
-    const totalEstimadoPendiente = ordenesPendientes.reduce((s, o) => s + getOrderTotal(o), 0);
-    const comprasEsteMes = compras.filter(cm => isThisMonth(getPurchaseDate(cm)));
-    const totalCompradoEsteMes = comprasEsteMes.reduce((s, cm) => s + getPurchaseTotal(cm), 0);
+    const totalEstimadoPendiente = ordenesPendientes.reduce((s, o) => s + o.totalEstimado, 0);
+    const comprasEsteMes = compras.filter(cm => isThisMonth(cm.fechaCompra));
+    const totalCompradoEsteMes = comprasEsteMes.reduce((s, cm) => s + cm.montoTotal, 0);
+
 
     window.estadoVistaCompras = {
         activeTab: 'oc',
@@ -689,7 +681,8 @@ async function renderCompras(c) {
             </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6" data-aos="fade-up">
-            ${kpiCard('OCs pendientes', pendingOrders.length)}
+
+            ${kpiCard('OCs pendientes', ordenesPendientes.length)}
             ${kpiCard('Total estimado pendiente', formatMoney(totalEstimadoPendiente))}
             ${kpiCard('Compras este mes', comprasEsteMes.length)}
             ${kpiCard('Total comprado este mes', formatMoney(totalCompradoEsteMes), 'text-emerald-400')}
@@ -712,7 +705,9 @@ async function renderCompras(c) {
                     <option value="">Todos los estados</option>
                     <option value="PENDIENTE">Pendiente</option>
                     <option value="APROBADA">Aprobada</option>
-                    <option value="RECHAZADA">Rechazada</option>
+
+                    <option value="CANCELADA">Cancelada</option>
+
                 </select>
             </div>
             <div id="tab-panel-oc" class="overflow-x-auto">
@@ -748,51 +743,122 @@ async function renderCompras(c) {
         </div>
     `;
 
-    function getProviderName(id) {
-        return proveedores.find(p => p.idEntidad === id)?.nombre_RazonSocial || 'N/A';
-    }
-
-    function itemsDetailHtml(items, showLote) {
-        if (!items || !items.length) return '<p class="text-sm text-slate-500">Sin productos.</p>';
-        return items.map(i => {
-            const prodId = getItemProductId(i);
-            const prodInfo = productos.find(p => p.id_producto === prodId);
-            const label = i.name || i.nombre || (prodInfo ? prodInfo.nombre_descripcion : `Producto #${prodId}`);
-            const lote = getItemLote(i);
-            const loteTxt = showLote && lote ? ` &middot; Lote: ${lote}` : '';
-            return `
-                <div class="flex justify-between text-sm py-1">
-                    <span class="text-[#F8FAFC]">${label}${loteTxt}</span>
-                    <span class="text-[#CBD5E1]">${getItemQuantity(i)} und. &middot; ${formatMoney(getItemCost(i))} c/u</span>
-                </div>
-            `;
-        }).join('');
-    }
 
     function renderOCHistory() {
         const st = window.estadoVistaCompras;
-        const base = orders.filter(o => !st.filtroEstadoOC || o.status === st.filtroEstadoOC);
+        const base = ordenes.filter(o => !st.filtroEstadoOC || o.estado.nombreEstado === st.filtroEstadoOC);
         renderFilterableTable({
             tbodyId: 'oc-history-tbody',
             data: base,
             search: st.busquedaOC,
-            matches: (o, s) => getOrderCorrelative(o).toLowerCase().includes(s) || getProviderName(getOrderProviderId(o)).toLowerCase().includes(s),
+
+            matches: (o, s) =>{
+                const idStr = String(o.idOrden ?? o.id ?? '').toLowerCase();
+                const razonSocial = (o.proveedor?.nombre_RazonSocial || '').toLowerCase();
+                return idStr.includes(s) || razonSocial.includes(s);
+            },
             expandedSet: st.ocsExpandidas,
             emptyMessage: 'No hay OCs que coincidan.',
-            getId: (o) => o.id,
-            rowHtml: (o, expanded) => `
-                <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0 cursor-pointer" onclick="toggleHistoryRow('OC', ${o.id})">
-                    <td class="p-4 whitespace-nowrap font-medium text-[#F8FAFC]">${getOrderCorrelative(o)}</td>
-                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${getProviderName(getOrderProviderId(o))}</td>
-                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${getOrderDate(o)}</td>
-                    <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-bold">${formatMoney(getOrderTotal(o))}</td>
-                    <td class="p-4 whitespace-nowrap">${statusBadge(o.status)}</td>
-                    <td class="p-4 text-slate-400"><i class="bi bi-chevron-${expanded ? 'up' : 'down'}"></i></td>
-                </tr>
-            `,
-            detailHtml: (o) => itemsDetailHtml(getOrderItems(o), false)
+            getId: (o) => o.idOrden ?? o.id,
+            rowHtml: (o, expanded) => {
+                const estado = o.estado?.nombreEstado ?? 'PENDIENTE';
+                return `
+                    <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0">
+                        <td class="p-4 whitespace-nowrap font-medium text-[#F8FAFC]">${o.idOrden ?? o.id}</td>
+                        <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${o.proveedor?.nombre_RazonSocial ?? 'N/A'}</td>
+                        <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${o.fecha ?? o.fechaEntrega ?? ''}</td>
+                        <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-bold">${formatMoney(o.totalEstimado ?? 0)}</td>
+                        <td class="p-4 whitespace-nowrap">${statusBadge(estado)}</td>
+                        <td class="p-4 whitespace-nowrap text-right">
+                            <div class="flex items-center justify-end gap-1">
+                                <button type="button" class="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all" title="Ver detalle" onclick="viewOrdenDetalle(${o.idOrden ?? o.id})">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                ${estado === 'PENDIENTE' ? `
+                                <button type="button" class="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-all" title="Rechazar orden" onclick="rechazarOrdenCompra(${o.idOrden ?? o.id}, 5)">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            },
+            detailHtml: () => ''
         });
     }
+
+    window.viewOrdenDetalle = async (idOrden) => {
+        const orden = await api.getPurchaseOrderById(idOrden);
+        if (!orden) {
+            return Swal.fire('Error', 'No se pudo cargar el detalle de la orden.', 'error');
+        }
+
+        const detallesHtml = (orden.detalles || []).map(d => `
+            <tr class="border-b border-slate-100 last:border-0">
+                <td class="p-3 text-slate-800">${d.producto?.nombre_descripcion ?? `Producto #${d.producto?.id_producto}`}</td>
+                <td class="p-3 text-slate-600">${d.cantidadPedida}</td>
+                <td class="p-3 text-slate-600">${formatMoney(d.precioUnitarioPactado)}</td>
+                <td class="p-3 text-slate-800 font-semibold">${formatMoney(d.cantidadPedida * d.precioUnitarioPactado)}</td>
+            </tr>
+        `).join('');
+
+        showModal(`
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">Detalle de OC #${orden.idOrden}</h3>
+                    <button class="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg p-2 transition-colors" onclick="closeModal(event)"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Proveedor</span><span class="text-slate-800 font-semibold">${orden.proveedor?.nombre_RazonSocial ?? 'N/A'}</span></div>
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Fecha</span><span class="text-slate-800 font-semibold">${orden.fecha ? new Date(orden.fecha).toLocaleDateString() : ''}</span></div>
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Estado</span>${statusBadge(orden.estado?.nombreEstado ?? 'PENDIENTE')}</div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-150">
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Producto</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Cant.</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Costo U.</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${detallesHtml || `<tr><td colspan="4" class="p-4 text-center text-slate-500">Sin productos.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end items-center border-t border-slate-100 pt-4 mt-4">
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Total Estimado</span>
+                        <span class="text-2xl font-black text-slate-800">${formatMoney(orden.totalEstimado ?? 0)}</span>
+                    </div>
+                </div>
+            </div>
+        `, 'max-w-3xl');
+    };
+
+
+    window.rechazarOrdenCompra = async (idOrden, idEstado) => {
+        const confirmacion = await Swal.fire({
+            icon: 'warning',
+            title: '¿Rechazar esta orden?',
+            text: 'La orden pasará a estado RECHAZADA y ya no podrá vincularse a una compra.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, rechazar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#EF4444'
+        });
+        if (!confirmacion.isConfirmed) return;
+
+        try {
+            await api.rejectPurchaseOrder(idOrden, idEstado);
+            await Swal.fire('Rechazada', 'La orden de compra fue rechazada.', 'success');
+            navigate('purchases');
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo rechazar la orden.', 'error');
+        }
+    };
 
     function renderCRHistory() {
         const st = window.estadoVistaCompras;
@@ -800,28 +866,84 @@ async function renderCompras(c) {
             tbodyId: 'cr-history-tbody',
             data: compras,
             search: st.busquedaCR,
-            matches: (cm, s) => String(getPurchaseInvoice(cm)).toLowerCase().includes(s) || getProviderName(getPurchaseProviderId(cm)).toLowerCase().includes(s),
+
+            matches: (cm, s) =>{
+                const serieCorrelativa = (cm.serieCorrelativa || '').toLowerCase();
+                const razonSocial = (cm.proveedor?.nombre_RazonSocial || '').toLowerCase();
+                return serieCorrelativa.includes(s) || razonSocial.includes(s);
+            },
             expandedSet: st.crsExpandidas,
             emptyMessage: 'No hay compras que coincidan.',
-            getId: (cm) => cm.id,
-            rowHtml: (cm, expanded) => `
-                <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0 cursor-pointer" onclick="toggleHistoryRow('CR', ${cm.id})">
-                    <td class="p-4 whitespace-nowrap font-medium text-[#F8FAFC]">FAC-${getPurchaseInvoice(cm)}</td>
-                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${getProviderName(getPurchaseProviderId(cm))}</td>
-                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${new Date(getPurchaseDate(cm)).toLocaleDateString()}</td>
-                    <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-bold">${formatMoney(getPurchaseTotal(cm))}</td>
+            getId: (cm) => cm.idCompra,
+            rowHtml: (o, expanded) => `
+                <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0">
+                    <td class="p-4 whitespace-nowrap font-medium text-[#F8FAFC]">${o.serieCorrelativa ?? 'N/A'}</td>
+                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${o.proveedor?.nombre_RazonSocial ?? 'N/A' }</td>
+                    <td class="p-4 whitespace-nowrap text-[#CBD5E1]">${o.fechaCompra ?? ''}</td>
+                    <td class="p-4 whitespace-nowrap text-[#F8FAFC] font-bold">${formatMoney(o.montoTotal ?? 0)}</td>
+
                     <td class="p-4 whitespace-nowrap">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                             Ingresado
                         </span>
                     </td>
-                    <td class="p-4 text-slate-400"><i class="bi bi-chevron-${expanded ? 'up' : 'down'}"></i></td>
+
+                    <td class="p-4 whitespace-nowrap text-right">
+                        <button type="button" class="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all" title="Ver detalle" onclick="viewCompraDetalle(${o.idCompra})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
                 </tr>
             `,
-            detailHtml: (cm) => itemsDetailHtml(getPurchaseItems(cm), true)
+            detailHtml: () => ''
         });
     }
+
+    window.viewCompraDetalle = async (idCompra) => {
+        const compra = await api.getPurchaseById(idCompra);
+        if (!compra) {
+            return Swal.fire('Error', 'No se pudo cargar el detalle de la compra.', 'error');
+        }
+
+        const detallesHtml = (compra.detallesCom || []).map(d => `
+            <tr class="border-b border-slate-100 last:border-0">
+                <td class="p-3 text-slate-800">${d.producto?.nombre_descripcion ?? 'Producto'}${d.lote?.numero_lote ? ` &middot; Lote: ${d.lote.numero_lote}` : ''}</td>
+                <td class="p-3 text-slate-600">${d.cantidad}</td>
+                <td class="p-3 text-slate-600">${formatMoney(d.precio_costo_unitario)}</td>
+                <td class="p-3 text-slate-800 font-semibold">${formatMoney(d.cantidad * d.precio_costo_unitario)}</td>
+            </tr>
+        `).join('');
+
+        showModal(`
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">Detalle de Compra FAC-${compra.serieCorrelativa}</h3>
+                    <button class="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg p-2 transition-colors" onclick="closeModal(event)"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Proveedor</span><span class="text-slate-800 font-semibold">${compra.proveedor?.nombre_RazonSocial ?? 'N/A'}</span></div>
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Fecha</span><span class="text-slate-800 font-semibold">${compra.fechaCompra ? new Date(compra.fechaCompra).toLocaleDateString() : ''}</span></div>
+                    <div><span class="block text-slate-500 text-xs uppercase font-bold mb-1">Total</span><span class="text-slate-800 font-semibold">${formatMoney(compra.montoTotal ?? 0)}</span></div>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-150">
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Producto</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Cant.</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Costo U.</th>
+                                <th class="p-3 text-xs font-bold text-slate-600 uppercase tracking-wider">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${detallesHtml || `<tr><td colspan="4" class="p-4 text-center text-slate-500">Sin productos.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `, 'max-w-3xl');
+    };
 
     window.switchComprasTab = (tab) => {
         window.estadoVistaCompras.activeTab = tab;

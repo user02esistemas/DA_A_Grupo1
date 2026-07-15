@@ -12,7 +12,9 @@ import com.DTO.EstadosSistemaDTO;
 import com.DTO.MovimientosDTO;
 import com.DTO.PagoDTO;
 import com.DTO.MetodosPagoDTO;
+
 import com.DTO.ProductosDTO;
+
 import com.DTO.VentaDTO;
 
 import jakarta.persistence.EntityManager;
@@ -566,7 +568,9 @@ public class VentaDAO {
 
                 cuota.setEstado(estado);
 
-               cronograma.add(cuota);
+
+                cronograma.add(cuota);
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -746,3 +750,4 @@ public class VentaDAO {
         return lista;
     }
 }
+

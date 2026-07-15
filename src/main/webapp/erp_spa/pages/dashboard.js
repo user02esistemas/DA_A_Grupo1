@@ -72,6 +72,7 @@
     });
     const totalPaymentsReceived = Object.values(paymentSums).reduce((a, b) => a + b, 0);
 
+
     // 8. Tendencia semanal de ventas y compras
     const salesWeeklyData = [];
     const purchasesWeeklyData = [];
@@ -82,6 +83,7 @@
         d.setDate(d.getDate() - i);
         const dStr = d.toISOString().split('T')[0];
         weekdayLabels.push(weekdays[d.getDay()]);
+
 
         const daySales = sales.filter(s => s.fecha_emision && s.fecha_emision.startsWith(dStr) && s.estado?.nombreEstado !== 'Anulado');
         salesWeeklyData.push(daySales.reduce((sum, s) => sum + s.total, 0));
@@ -102,12 +104,14 @@
             isNegative: false,
             icon: 'fa-receipt',
             color: estadoVenta === 'Anulado' ? 'text-red-500 bg-red-500/10' : 'text-blue-500 bg-blue-500/10'
+
         });
     });
     purchases.forEach(p => {
         timeline.push({
             time: p.fechaCompra,
             label: 'Compra Registrada',
+
             desc: `Factura ${p.serieCorrelativa} - ${p.proveedor?.nombre_RazonSocial || 'Proveedor'}`,
             amount: p.montoTotal,
             isNegative: true,
@@ -117,6 +121,7 @@
     });
     entities.forEach(e => {
         timeline.push({
+
             time: e.idEntidad ? new Date(e.idEntidad).toISOString().split('T')[0] + ' 12:00:00' : todayStr + ' 12:00:00',
             label: `${e.nombreTipoEntidad === 'CLIENTE' ? 'Cliente' : 'Proveedor'} Creado`,
             desc: e.nombre_RazonSocial,
@@ -128,6 +133,7 @@
     });
     movements.forEach(m => {
         timeline.push({
+
             time: m.fecha || todayStr + ' 12:00:00',
             label: `Kardex: ${m.idTipoMovimiento === 1 ? 'ENTRADA' : 'SALIDA'}`,
             desc: `${m.referencia} (${m.cantidad} und)`,
@@ -137,7 +143,6 @@
             color: m.idTipoMovimiento === 1 ? 'text-teal-500 bg-teal-500/10' : 'text-amber-500 bg-amber-500/10'
         });
     });
-
 
     // Sort timeline descending
     timeline.sort((a, b) => b.time.localeCompare(a.time));
@@ -403,6 +408,7 @@
                                 <div class="text-right">
                                     <span class="text-xs text-red-400 font-black">Stock: ${p.stock} ${p.unidad?.nombre || 'Unid'}</span>
                                     <span class="block text-[10px] text-slate-400">Mínimo: ${p.stock_minimo} ${p.unidad?.nombre || 'Unid'}</span>
+
                                 </div>
                             </div>
                             `).join('')}
@@ -577,6 +583,7 @@
             }
         };
         updateDashboardClock();
+
         dashboardClockInterval = setInterval(updateDashboardClock, 1000);
 
         if (window.AOS) AOS.init();

@@ -1,9 +1,9 @@
 package com.DAO;
 import com.DTO.*;
 
+
 import java.util.ArrayList;
 import java.util.List;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -13,6 +13,9 @@ public class CompraDAO {
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("SDDGPU");
     
     private ProductosDAO prod = new ProductosDAO();
+    private LotesDAO loteDAO = new LotesDAO();
+    private OrdenDAO ordenDAO = new OrdenDAO();
+
 
     public boolean insertarCompra(CompraDTO compra){
         EntityManager em  = emf.createEntityManager();
@@ -34,13 +37,19 @@ public class CompraDAO {
             em.getTransaction().begin();
             Integer idOrden = null;
 
-            if(compra.getOrden() != null){
+
+            if(compra.getOrden() != null && compra.getOrden().getIdOrden() != null){
                 idOrden = compra.getOrden().getIdOrden();
+                boolean ordenAprobada = ordenDAO.actualizarEstadoOrden(idOrden, 23);
+                if(!ordenAprobada){
+                    throw new Exception("Error al aprobar orden de compra");
+                }
+
             }
 
             Number idGenerado = (Number) em.createNativeQuery(sql)
                     .setParameter(1, idOrden)
-                    .setParameter(2, compra.getUsuario().getIdEntidad())
+                    .setParameter(2, compra.getUsuario().getIdUsuario())
                     .setParameter(3, compra.getProveedor().getIdEntidad())
                     .setParameter(4, compra.getTipoComprobante())
                     .setParameter(5, compra.getSerieCorrelativa())
@@ -56,6 +65,27 @@ public class CompraDAO {
                     }
 
                     detalle.getCompra().setIdCompra(idCompra);
+
+
+                    if(detalle.getLote().getNumero_lote()!= null && !detalle.getLote().getNumero_lote().trim().isEmpty()){
+                        LotesDTO loteInsertar = new LotesDTO();
+                        loteInsertar.setProducto(detalle.getProducto());
+                        loteInsertar.setNumero_lote(detalle.getLote().getNumero_lote());
+                        loteInsertar.setStock_lote(detalle.getCantidad());
+                        
+                        int insertarLote = loteDAO.insertarLotes(loteInsertar);
+
+                        if(insertarLote == -1){
+                            throw new Exception("Error al insertar un lote de la compra");
+                        }
+
+                        detalle.getLote().setId_lote(insertarLote);
+                    }else{
+                        detalle.getLote().setId_lote(null);
+                    }
+                
+
+
                     boolean insertado = insertarDetalleCompra(em, detalle);
 
                     if(!insertado){
@@ -76,8 +106,6 @@ public class CompraDAO {
                         throw new Exception("Error al actualizar un stock del producto");
                     }
                     prod.movimientoInventario(em, movimiento);
-
-
 
                 }
             }
@@ -126,51 +154,148 @@ public class CompraDAO {
         }
     }
 
-    // Lista todas las compras ya recibidas en almacén, con el proveedor
-    // incluido. Se usa en el Dashboard, Reportes e Historial de Compras.
-    @SuppressWarnings("unchecked")
-    public List<CompraDTO> listarTodasLasCompras(){
+
+     @SuppressWarnings("unchecked")
+    public List<CompraDTO> listarTodasCompras(){
         EntityManager em = emf.createEntityManager();
-        List<CompraDTO> lista = new ArrayList<>();
+        List<CompraDTO> listaCompras = new ArrayList<>();
 
         String sql = """
-                    SELECT
-                        C.id_compra,
-                        C.serie_correlativa,
-                        C.tipo_comprobante,
-                        C.fecha_compra,
-                        C.monto_total,
-                        E.id_entidad,
-                        E.nombre_razon_social
-                    FROM compras C
-                    INNER JOIN entidades E ON C.id_proveedor = E.id_entidad
-                    ORDER BY C.id_compra DESC
+                SELECT 
+                C.id_compra,
+                C.serie_correlativa,
+                E.nombre_razon_social,
+                C.fecha_compra,
+                C.monto_total
+                FROM compras AS C
+                INNER JOIN entidades AS E ON C.id_proveedor = E.id_entidad
                 """;
+        
         try {
-            List<Object[]> filas = em.createNativeQuery(sql).getResultList();
+            Query query = em.createNativeQuery(sql);
+            List<Object[]> results = query.getResultList();
 
-            for (Object[] fila : filas) {
+            for(Object[] fila: results){
                 CompraDTO compra = new CompraDTO();
-                compra.setIdCompra(((Number) fila[0]).intValue());
-                compra.setSerieCorrelativa((String) fila[1]);
-                compra.setTipoComprobante((String) fila[2]);
-                compra.setFechaCompra((java.util.Date) fila[3]);
-                compra.setMontoTotal(((Number) fila[4]).doubleValue());
-
+                compra.setIdCompra(((Number)fila[0]).intValue());
+                compra.setSerieCorrelativa((String)fila[1]);
+                
                 EntidadesDTO proveedor = new EntidadesDTO();
-                proveedor.setIdEntidad(((Number) fila[5]).intValue());
-                proveedor.setNombre_RazonSocial((String) fila[6]);
+                proveedor.setNombre_RazonSocial((String)fila[2]);
                 compra.setProveedor(proveedor);
 
-                lista.add(compra);
+                compra.setFechaCompra(new java.sql.Date(((java.util.Date) fila[3]).getTime()));
+                compra.setMontoTotal(((Number)fila[4]).doubleValue());
+
+                listaCompras.add(compra);
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
+             e.printStackTrace();
         } finally {
             em.close();
         }
-        return lista;
+
+        return listaCompras;
     }
 
+    @SuppressWarnings("unchecked")
+    public CompraDTO obtenerCompra(int idCompra){
+        EntityManager em = emf.createEntityManager();
+
+        CompraDTO compra = null;
+
+        String sqlCabecera = """
+                 SELECT 
+                    C.id_compra,
+                    C.serie_correlativa,
+                    E.nombre_razon_social,
+                    C.fecha_compra,
+                    C.monto_total
+                FROM compras AS C
+                INNER JOIN entidades AS E ON C.id_proveedor = E.id_entidad
+                WHERE C.id_compra = ?1
+                """;
+        
+        String sqlDetalles = """
+                SELECT
+                    DC.id_detalle_compra,
+                    DC.cantidad,
+                    DC.precio_costo_unitario,
+                    P.nombre_descripcion,
+                    P.maneja_lote,
+                    L.numero_lote
+                FROM detalle_compras AS DC
+                INNER JOIN productos AS P ON DC.id_producto = P.id_producto
+                LEFT JOIN lotes AS L ON DC.id_lote = L.id_lote
+                WHERE DC.id_compra = ?1
+                """;
+
+        try {
+            Query queryCabecera = em.createNativeQuery(sqlCabecera)
+                .setParameter(1, idCompra);
+            
+            List<Object[]> resultadoCabecera = queryCabecera.getResultList();
+
+            if (resultadoCabecera.isEmpty()) {
+                return null;
+            }
+
+            Object[] fila = resultadoCabecera.get(0);
+
+            compra = new CompraDTO();
+            compra.setIdCompra(((Number)fila[0]).intValue());
+            compra.setSerieCorrelativa((String)fila[1]);
+            
+            EntidadesDTO proveedor = new EntidadesDTO();
+            proveedor.setNombre_RazonSocial((String)fila[2]);
+            compra.setProveedor(proveedor);
+
+            compra.setFechaCompra(new java.sql.Date(((java.util.Date) fila[3]).getTime()));
+            compra.setMontoTotal(((Number)fila[4]).doubleValue());
+
+            List<DetalleCompraDTO> detalles = new ArrayList<>();
+            Query queryDetalles = em.createNativeQuery(sqlDetalles)
+                .setParameter(1, idCompra);
+            List<Object[]> resultadoDetalles = queryDetalles.getResultList();
+
+            for(Object[] filaDet: resultadoDetalles){
+                DetalleCompraDTO detalleC = new DetalleCompraDTO();
+                detalleC.setIdDetalleCompra(((Number)filaDet[0]).intValue());
+                detalleC.setCantidad(((Number)filaDet[1]).intValue());
+                detalleC.setPrecio_costo_unitario(((Number)filaDet[2]).doubleValue());
+                
+                ProductosDTO producto = new ProductosDTO();
+                producto.setNombre_descripcion((String)filaDet[3]);
+                Object filaLote = filaDet[4]; 
+                boolean manejaLoteVal = false;
+
+                if (filaLote instanceof Boolean) {
+                    manejaLoteVal = (Boolean) filaLote;
+                } else if (filaLote instanceof Number) {
+                    manejaLoteVal = ((Number) filaLote).intValue() != 0;
+                }
+
+                producto.setManeja_lote(manejaLoteVal);
+
+                detalleC.setProducto(producto);
+
+                LotesDTO lote = new LotesDTO();
+                lote.setNumero_lote((String)filaDet[5]);
+                detalleC.setLote(lote);
+
+                detalles.add(detalleC);
+            }
+
+            compra.setDetallesCom(detalles);
+
+        } catch (Exception e) {
+           e.printStackTrace();
+        } finally {
+            em.close();
+        }
+
+        return compra;
+    }
 
 }

@@ -12,13 +12,15 @@ import jakarta.persistence.*;
 public class LotesDAO {
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("SDDGPU");
 
-    public boolean insertarLotes(LotesDTO lote){
+
+    public int insertarLotes(LotesDTO lote){
         EntityManager em = emf.createEntityManager();
         String sql = """
                 INSERT INTO lotes (id_producto,
                                     id_certificado,
                                     numero_lote,
                                     stock_lote)
+                OUTPUT INSERTED.id_lote
                 VALUES  (?1,?2,?3,?4)
                 """;
 
@@ -30,22 +32,25 @@ public class LotesDAO {
                 idCertificado = lote.getCerti().getId_certifiado();
             }
 
-            em.createNativeQuery(sql)
+
+            Number idLote = (Number)em.createNativeQuery(sql)
                 .setParameter(1, lote.getProducto().getId_producto())
                 .setParameter(2, idCertificado)
                 .setParameter(3, lote.getNumero_lote())
                 .setParameter(4, lote.getStock_lote())
-                .executeUpdate();
+                .getSingleResult();
 
             em.getTransaction().commit();
-            return true;
+            return idLote.intValue();
+
             
         } catch (Exception e) {
              e.printStackTrace();
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            return false;
+
+            return -1;
             
         } finally {
             em.close();

@@ -4,7 +4,7 @@ import java.util.*;
 public class CompraDTO {
     private Integer idCompra;
     private OrdenCompraDTO orden;
-    private EntidadesDTO usuario;
+    private UsuariosDTO usuario;
     private EntidadesDTO proveedor;
     private String tipoComprobante;
     private String serieCorrelativa;
@@ -31,13 +31,6 @@ public class CompraDTO {
         this.orden = orden;
     }
 
-    public EntidadesDTO getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(EntidadesDTO usuario) {
-        this.usuario = usuario;
-    }
 
     public EntidadesDTO getProveedor() {
         return proveedor;
@@ -87,6 +80,14 @@ public class CompraDTO {
         this.detallesCom = detallesCom;
     }
 
-    
+
+    public UsuariosDTO getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(UsuariosDTO usuario) {
+        this.usuario = usuario;
+    }
+
     
 }

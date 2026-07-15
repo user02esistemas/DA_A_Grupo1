@@ -23,7 +23,7 @@ public class CompraController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private OrdenDAO ordenDAO = new OrdenDAO();
     private CompraDAO compraDAO = new CompraDAO();
-    private Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+    private Gson gson = new Gson();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -39,17 +39,69 @@ public class CompraController extends HttpServlet {
         PrintWriter out = null;
         try {
             out = response.getWriter();
-            
-            if(accion.equals("listarOrdenes")){
-            List<OrdenCompraDTO> listTotalOrdenes = ordenDAO.listarTodasLasOrdenes();
-            out.print(gson.toJson(listTotalOrdenes));
-                } else if(accion.equals("listarCompras")){
-            List<CompraDTO> listTotalCompras = compraDAO.listarTodasLasCompras();
-            out.print(gson.toJson(listTotalCompras));
-                } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"error\":\"Acción GET no válida en Compras\"}");
+
+
+            switch (accion) {
+                case "listarOrdenes":
+                    List<OrdenCompraDTO> listTotalOrdenes = ordenDAO.listarTodasLasOrdenes();
+                    out.print(gson.toJson(listTotalOrdenes));
+                    break;
+                
+                case "ordenesPendientes":
+                    List<OrdenCompraDTO> listaOrdPendientes = ordenDAO.listarOrdenesPendientes();
+                    out.print(gson.toJson(listaOrdPendientes));
+                    break;
+                    
+                case "listarOrden":
+                    String idParametro = request.getParameter("idOrden");
+
+                    if (idParametro == null || idParametro.trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"error\":\"Falta el parámetro idOrden\"}");
+                        return;
+                    }
+
+                    int idOrden = Integer.parseInt(idParametro);
+                    OrdenCompraDTO orden = ordenDAO.listarOrden(idOrden);
+
+                    if (orden == null) {
+                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print("{\"error\":\"Orden no encontrada\"}");
+                        return;
+                    }
+
+                    out.print(gson.toJson(orden));
+                    break;
+
+                case "listarCompras":          
+                    List<CompraDTO> listaTotalCompras = compraDAO.listarTodasCompras();
+                    out.print(gson.toJson(listaTotalCompras));
+                    break;
+                
+                case "obtenerCompra":
+                    String idCompraParametro = request.getParameter("idCompra");
+
+                    if (idCompraParametro == null || idCompraParametro.trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"error\":\"Falta el parámetro idCompra\"}");
+                        return;
+                    }
+
+                     int idCompra = Integer.parseInt(idCompraParametro);
+                     CompraDTO compra = compraDAO.obtenerCompra(idCompra);
+
+                    if(compra == null){
+                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print("{\"error\":\"Compra no encontrada\"}");
+                        return;
+                    }
+                    out.print(gson.toJson(compra));
+                    break;
+                    
+                default:
+                    break;
             }
+            
         } catch (Exception e) {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -80,7 +132,13 @@ public class CompraController extends HttpServlet {
 
             switch (action) {
                 case "insertarOrden":
-                    OrdenCompraDTO orden = gson.fromJson(reader, OrdenCompraDTO.class);
+
+                    Gson customGson = new GsonBuilder()
+                    .setDateFormat("yyyy-MM-dd")
+                    .create();
+
+                    OrdenCompraDTO orden = customGson.fromJson(reader, OrdenCompraDTO.class);
+
                     
                     double totalCalculado = 0.0;
                     
@@ -139,6 +197,30 @@ public class CompraController extends HttpServlet {
                     }
                     
                     break;
+
+                
+                case "rechazarOrden":
+                    String idParametroO = request.getParameter("idOrden");
+
+                    if (idParametroO == null || idParametroO.trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\":\"Falta el parámetro idOrden para rechazar\"}");
+                        return;
+                    }
+
+                    int idOrdenE = Integer.parseInt(idParametroO);
+                    int idEstadoApl = Integer.parseInt(request.getParameter("idEstado"));
+                    boolean ordenRechazada = ordenDAO.actualizarEstadoOrden(idOrdenE,idEstadoApl);
+
+                    if (!ordenRechazada) {
+                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                        out.print("{\"success\": false, \"error\":\"Orden no encontrada\"}");
+                        return;
+                    }
+
+                    out.print("{\"success\": true}");
+                    break;
+
                 default:
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     out.print("{\"success\": false, \"error\": \"Acción POST no válida en Compras\"}");

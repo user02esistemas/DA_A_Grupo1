@@ -7,13 +7,16 @@
 
     <persistence-unit name="SDDGPU" transaction-type="RESOURCE_LOCAL">
 
-        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+       <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+
+
 
         <properties>
 
             <property name="jakarta.persistence.jdbc.driver"
                       value="com.microsoft.sqlserver.jdbc.SQLServerDriver"/>
-
            <property name="jakarta.persistence.jdbc.url"
                     value="jdbc:sqlserver://DESKTOP-46V1E42:51827;databaseName=solda_master_db;encrypt=true;trustServerCertificate=true"/>
           
@@ -31,6 +34,7 @@
 
             <property name="hibernate.format_sql"
                       value="true"/>
+
 
             <property name="hibernate.hbm2ddl.auto"
                       value="none"/>

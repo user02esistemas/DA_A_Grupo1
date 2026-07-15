@@ -14,6 +14,7 @@ import com.DAO.*;
 import com.DTO.*;
 import java.util.*;
 import com.google.gson.Gson;
+
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
@@ -22,6 +23,7 @@ public class VentaController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     VentaDAO ventaDAO = new VentaDAO();
     Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
+
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -55,6 +57,7 @@ public class VentaController extends HttpServlet {
                     List<CuotaDTO> listaCuotas = ventaDAO.listarTodasLasCuotas();
                     out.print(gson.toJson(listaCuotas));
                     break;
+
                 
                 case "listaCronograma" :
                     String idVenta = request.getParameter("idVenta");

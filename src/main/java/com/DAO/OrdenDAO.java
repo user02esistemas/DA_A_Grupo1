@@ -28,21 +28,20 @@ public class OrdenDAO {
                                             id_estado_orden,
                                             total_estimado)
                 OUTPUT INSERTED.id_orden
-                VALUES(?1,?2,?3,?4,?5,?6)
+                VALUES(?1,?2,GETDATE(),?3,?4,?5)
                 """;
         try {
             em.getTransaction().begin();
 
-            Date fechaPedido = new Date(orden.getFecha().getTime());
             Date fechaEntrega = new Date(orden.getFechaEntrega().getTime());
             
             Number idGenerado = (Number) em.createNativeQuery(sql)
                 .setParameter(1, orden.getProveedor().getIdEntidad())
-                .setParameter(2, orden.getUsuario().getIdEntidad())
-                .setParameter(3, fechaPedido)
-                .setParameter(4, fechaEntrega)
-                .setParameter(5, 3)
-                .setParameter(6, orden.getTotalEstimado())
+
+                .setParameter(2, orden.getUsuario().getIdUsuario())
+                .setParameter(3, fechaEntrega)
+                .setParameter(4, 3)
+                .setParameter(5, orden.getTotalEstimado())
                 .getSingleResult();
 
             int idOrden = idGenerado.intValue();
@@ -103,6 +102,37 @@ public class OrdenDAO {
         }
     }
 
+
+    public boolean actualizarEstadoOrden(int idOrden, int idEstado){
+        EntityManager em = emf.createEntityManager();
+
+        String sql = """
+                UPDATE ordenes_compra SET id_estado_orden = ?1
+                WHERE id_orden = ?2
+                """; 
+
+        try {
+            em.getTransaction().begin();
+
+            em.createNativeQuery(sql)
+                .setParameter(1, idEstado)
+                .setParameter(2, idOrden)
+                .executeUpdate();
+            
+            em.getTransaction().commit();
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback(); 
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public List<OrdenCompraDTO> listarOrdenesPendientes(){
        EntityManager em = emf.createEntityManager();
@@ -140,16 +170,28 @@ public class OrdenDAO {
     }
     
     @SuppressWarnings("unchecked")
-    public OrdenCompraDTO listarOrden(OrdenCompraDTO orden){
+
+    public OrdenCompraDTO listarOrden(int idOrden){
        EntityManager em = emf.createEntityManager();
 
-       List<DetalleOrdenDTO> detalles = orden.getDetalles();
-        if (detalles == null) {
-            detalles = new ArrayList<>();
-            orden.setDetalles(detalles);
-        }
+        OrdenCompraDTO orden = null;
 
-       String sql = """
+        String sqlCabecera = """
+                SELECT 
+                    O.id_orden,
+                    O.fecha_entrega,
+                    O.total_estimado,
+                    ESTADO.nombre,
+                    O.id_proveedor,
+                    E.nombre_razon_social
+                FROM ordenes_compra AS O
+                INNER JOIN entidades AS E ON O.id_proveedor = E.id_entidad
+                INNER JOIN estados_sistema AS ESTADO ON O.id_estado_orden = ESTADO.id_estado
+                WHERE O.id_orden = ?1
+                """;
+
+        String sqlDetalles = """
+
                 SELECT 
                     DO.id_detalle_orden,
                     DO.id_producto,
@@ -160,27 +202,55 @@ public class OrdenDAO {
                 FROM detalle_orden AS DO
                 INNER JOIN productos AS P ON DO.id_producto = P.id_producto
                 WHERE DO.id_orden = ?1
-               """; 
-        try {
-            Query query = em.createNativeQuery(sql)
-                .setParameter(1, orden.getIdOrden());
-            List<Object[]> resultado = query.getResultList();
 
-            for(Object[] fila: resultado){
+                """;
+        try {
+            Query queryCabecera = em.createNativeQuery(sqlCabecera).setParameter(1, idOrden);
+
+            List<Object[]> resultadoCabecera = queryCabecera.getResultList();
+
+            if (resultadoCabecera.isEmpty()) {
+                return null;
+            }
+
+            Object[] fila = resultadoCabecera.get(0);
+
+            orden = new OrdenCompraDTO();
+            orden.setIdOrden(((Number) fila[0]).intValue());
+            orden.setFecha(new java.sql.Date(((java.util.Date) fila[1]).getTime()));
+            orden.setTotalEstimado(((Number) fila[2]).doubleValue());
+
+            EstadosSistemaDTO estado = new EstadosSistemaDTO();
+            estado.setNombreEstado((String) fila[3]);
+            orden.setEstado(estado);
+
+            EntidadesDTO entidad = new EntidadesDTO();
+            entidad.setIdEntidad(((Number) fila[4]).intValue());
+            entidad.setNombre_RazonSocial((String) fila[5]);
+            orden.setProveedor(entidad);
+
+            List<DetalleOrdenDTO> detalles = new ArrayList<>();
+            Query queryDetalles = em.createNativeQuery(sqlDetalles).setParameter(1, idOrden);
+            List<Object[]> resultadoDetalles = queryDetalles.getResultList();
+
+            for (Object[] filaDet : resultadoDetalles) {
                 DetalleOrdenDTO detalleO = new DetalleOrdenDTO();
-                detalleO.setIdDetalleOrden(((Number)fila[0]).intValue());
-                detalleO.setCantidadPedida(((Number)fila[4]).intValue());
-                detalleO.setPrecioUnitarioPactado(((Number)fila[5]).doubleValue());
+                detalleO.setIdDetalleOrden(((Number) filaDet[0]).intValue());
+                detalleO.setCantidadPedida(((Number) filaDet[4]).intValue());
+                detalleO.setPrecioUnitarioPactado(((Number) filaDet[5]).doubleValue());
 
                 ProductosDTO prod = new ProductosDTO();
-                prod.setId_producto(((Number)fila[1]).intValue());
-                prod.setNombre_descripcion((String)fila[2]);
-                prod.setManeja_lote((Boolean)fila[3]);
+                prod.setId_producto(((Number) filaDet[1]).intValue());
+                prod.setNombre_descripcion((String) filaDet[2]);
+                prod.setManeja_lote((Boolean) filaDet[3]);
 
                 detalleO.setProducto(prod);
 
                 detalles.add(detalleO);
             }
+
+            orden.setDetalles(detalles);
+
   
         } catch (Exception e) {
             e.printStackTrace();
@@ -198,7 +268,7 @@ public class OrdenDAO {
         String sql = """
                 SELECT 
                     O.id_orden,
-                    O.fecha,
+                    O.fecha_pedido,
                     O.total_estimado,
                     ESTADO.nombre,
                     E.nombre_razon_social
@@ -215,7 +285,7 @@ public class OrdenDAO {
                 EntidadesDTO entidad = new EntidadesDTO();
 
                 orden.setIdOrden(((Number) fila[0]).intValue());
-                orden.setFecha((Date) fila[1]);
+                orden.setFecha(new java.sql.Date(((java.util.Date) fila[1]).getTime()));
                 orden.setTotalEstimado(((Number) fila[2]).doubleValue());
                 EstadosSistemaDTO estado = new EstadosSistemaDTO();
                 estado.setNombreEstado((String)fila[3]);
