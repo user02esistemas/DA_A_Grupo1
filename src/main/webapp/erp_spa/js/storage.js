@@ -114,7 +114,31 @@
         },
         
         async saveLote(lote) {
-            
+            try {
+                const response = await fetch('InventarioController?action=insertarLote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        idProducto: lote.productId,
+                        lote: {
+                            numero_lote: lote.loteNumber,
+                            fecha_entrada: lote.dateIn,
+                            stock_lote: lote.stock
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo registrar el lote');
+                }
+
+                state.caches.products = await this.getProducts();
+                return result;
+            } catch (e) {
+                console.error('Error al guardar el lote:', e);
+                throw e;
+            }
         },
         
         async uploadCertificateToLote(loteId, fileName) {
@@ -444,25 +468,39 @@
 
         async getMovements(productId) {            
             try {
-                
-                const url = `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`;
+                const url = productId
+                    ? `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`
+                    : 'InventarioController?action=kardexGlobalHoy';
+
                 const response = await fetch(url);
-                
+
                 if (!response.ok) {
-                    console.error("Respuesta del servidor no fue ok:", response.status);
                     throw new Error(`Error en el servidor: ${response.status}`);
                 }
-                
-                return await response.json();
+
+                const movimientos = await response.json();
+
+                return movimientos.map(m => ({
+                    id: m.idMovimiento,
+                    productId: m.idProducto,
+                    type: (m.idTipoMovimiento === 1 || m.idTipoMovimiento === 3)
+                        ? 'ENTRADA'
+                        : 'SALIDA',
+                    quantity: m.cantidad,
+                    date: m.fecha
+                        ? new Date(m.fecha).toLocaleString('es-PE')
+                        : '-',
+                    reason: m.referencia || '-'
+                }));
             } catch (e) {
-                console.error('Error al obtener Kardex:', e);
+                console.error('Error al obtener movimientos:', e);
                 return [];
             }
         },
 
         async getRecentMovements() {
             try {
-                const response = await fetch('InventarioController?action=movimientosRecientes');
+                const response = await fetch('InventarioController?action=kardexGlobalHoy');
                 if (!response.ok) throw new Error(`Error: ${response.status}`);
                 return await response.json();
             } catch (e) {

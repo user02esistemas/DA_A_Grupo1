@@ -72,8 +72,8 @@ public class InventarioController extends HttpServlet {
                         out.print("{\"error\":\"ID Producto faltante\"}");
                     }
                     break;
-                    
-                case "kardex":
+                
+                case "kardexProductoID":
                     String idProdParam = request.getParameter("idProducto");
 
                     if (idProdParam != null && !idProdParam.isEmpty() && !idProdParam.equals("undefined")) {
@@ -90,6 +90,13 @@ public class InventarioController extends HttpServlet {
                         out.print("{\"error\":\"ID Producto faltante\"}");
                     }
 
+                    break;
+                    
+                case "kardexGlobalHoy":
+                    List<MovimientosDTO> movimientosHoy =
+                            prodDAO.mostrarMovimientosGlobalesHoy();
+
+                    out.print(gson.toJson(movimientosHoy));
                     break;
 
                 default:

@@ -16,7 +16,7 @@
             <property name="jakarta.persistence.jdbc.driver"
                       value="com.microsoft.sqlserver.jdbc.SQLServerDriver"/>
             <property name="jakarta.persistence.jdbc.url"
-                      value="jdbc:sqlserver://LAPTOP-F83H1MEG:1433;databaseName=solda_master_db;encrypt=false;trustServerCertificate=true"/>
+                      value="jdbc:sqlserver://DESKTOP-A9SLTEQ;databaseName=solda_master_db;encrypt=false;trustServerCertificate=true"/>
             <property name="jakarta.persistence.jdbc.user"
                       value="sa"/>
             <property name="jakarta.persistence.jdbc.password"
