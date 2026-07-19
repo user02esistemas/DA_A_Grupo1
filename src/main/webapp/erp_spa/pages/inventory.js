@@ -702,12 +702,7 @@ window.addNewLote = async () => {
         hasCert:    false
     });
 
-    const prod = state.caches.products.find(x => x.id_producto === state.currentLotesProductId);
-    if (prod) {
-        prod.stock += stock;
-        await api.saveProduct(prod, null);
-    }
-
+    await Swal.fire('¡Éxito!', 'Lote registrado y stock actualizado.', 'success');
     await renderLotesModalContent();
 };
 
