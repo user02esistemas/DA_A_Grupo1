@@ -1,5 +1,5 @@
 ﻿async function renderDashboard(c) {
-    // 1. Fetch data from simulated DB/API layers
+    // 1. Obtener datos de las capas simuladas de la base de datos/API
     const sales = await api.getSales(); // NO TOCAR EXPLOTA EL SISTEMA XDDD
     const purchases = await api.getPurchases();
     const products = await api.getProducts();
@@ -133,11 +133,11 @@
         });
     });
 
-    // Sort timeline descending
+    // Ordenar la línea de tiempo de forma descendente
     timeline.sort((a, b) => b.time.localeCompare(a.time));
     const recentActivity = timeline.slice(0, 20);
 
-    // 10. Render Layout HTML
+    // 10. Renderizar el diseño HTML
     c.innerHTML = `
         <!-- HEADER MODULE -->
         <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4" data-aos="fade-down">
@@ -167,7 +167,7 @@
             </div>
         </div>
 
-        <!-- 1. RAPID METRICS GRID (6 CARDS RESPONSIVE) -->
+        <!-- 1. CUADRÍCULA DE MÉTRICAS RÁPIDAS (6 TARJETAS RESPONSIVAS) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6" data-aos="fade-up">
             <!-- Ventas del Día -->
             <div class="bg-[#172033] rounded-2xl p-4 border border-[#1E293B] hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -444,7 +444,7 @@
         </div>
     `;
 
-    // 11. Custom Switcher for Exchange Rate
+    // 11. Selector personalizado para el tipo de cambio
     window.editExchangeRate = () => {
         Swal.fire({
             title: 'Actualizar Tipo de Cambio',
@@ -470,14 +470,14 @@
         });
     };
 
-    // 12. RENDER CHART ENGINE (Chart.js)
+    // 12. MOTOR DE RENDERIZADO DE GRÁFICOS (Chart.js)
     setTimeout(() => {
         const isLight = document.body.classList.contains('light-theme');
         const labelColor = isLight ? '#475569' : '#cbd5e1';
         const gridColor = isLight ? '#e2e8f0' : 'rgba(255,255,255,0.06)';
         const borderColor = isLight ? '#cbd5e1' : '#1e293b';
 
-        // A. Weekly Cash Flow Chart (Sales and Purchases)
+        // A. Diagrama de flujo de caja semanal (ventas y compras)
         const weeklyCtx = document.getElementById('weeklyFlowChart');
         if (weeklyCtx) {
             new Chart(weeklyCtx, {
@@ -488,7 +488,7 @@
                         {
                             label: 'Ventas',
                             data: salesWeeklyData,
-                            backgroundColor: '#2563eb', // Premium primary blue
+                            backgroundColor: '#2563eb', 
                             borderRadius: 6,
                             barPercentage: 0.5,
                             categoryPercentage: 0.8
@@ -496,7 +496,7 @@
                         {
                             label: 'Compras',
                             data: purchasesWeeklyData,
-                            backgroundColor: '#ef4444', // Red 500
+                            backgroundColor: '#ef4444', 
                             borderRadius: 6,
                             barPercentage: 0.5,
                             categoryPercentage: 0.8
@@ -523,7 +523,7 @@
             });
         }
 
-        // B. Payment Methods Distribution (Doughnut Chart)
+        // B. Distribución de métodos de pago (diagrama de anillos)
         const payCtx = document.getElementById('payMethodsChart');
         if (payCtx) {
             const hasPayments = totalPaymentsReceived > 0;
@@ -550,7 +550,7 @@
             });
         }
 
-        // Dynamic ticking clock inside dashboard header
+        // Reloj dinámico en el encabezado del panel de control
         let dashboardClockInterval = null;
         const updateDashboardClock = () => {
             const clockEl = document.getElementById('dashboard-clock-display');

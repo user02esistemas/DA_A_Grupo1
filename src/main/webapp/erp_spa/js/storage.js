@@ -25,7 +25,7 @@
 
     const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-    // 4. API Service Layer
+    // 4. Capa de servicio API
     const api = {
 
         getUsuarioId() {
@@ -550,7 +550,7 @@
         }
     };
 
-    // 5. Global Reactive Application State
+    // 5. Estado global de la aplicación reactiva
     const state = {
         user: JSON.parse(localStorage.getItem('usuario_sesion')) || null,
         currentView: 'dashboard',
