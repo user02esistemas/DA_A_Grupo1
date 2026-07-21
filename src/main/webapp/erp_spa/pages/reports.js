@@ -20,9 +20,9 @@
     };
 
     const REPORTS_METADATA = [
-        { id: 'ventas', title: 'Ventas', desc: 'Análisis completo de ingresos y comprobantes', icon: 'bi-graph-up-arrow', color: 'text-blue-500 bg-blue-500/10', count: `${sales.filter(s=>s.status!=='Anulado').length} ventas` },
+        { id: 'ventas', title: 'Ventas', desc: 'Análisis completo de ingresos y comprobantes', icon: 'bi-graph-up-arrow', color: 'text-blue-500 bg-blue-500/10', count: `${sales.filter(s=>s.estado?.nombreEstado!=='Anulado').length} ventas` },
         { id: 'compras', title: 'Compras', desc: 'Control de adquisiciones y proveedores', icon: 'bi-cart-check-fill', color: 'text-emerald-500 bg-emerald-500/10', count: `${purchases.length} compras` },
-        { id: 'clientes', title: 'Clientes', desc: 'Historial comercial y proformas', icon: 'bi-people-fill', color: 'text-indigo-500 bg-indigo-500/10', count: `${entities.filter(e=>e.type==='CLIENTE').length} clientes` },
+        { id: 'clientes', title: 'Clientes', desc: 'Historial comercial y proformas', icon: 'bi-people-fill', color: 'text-indigo-500 bg-indigo-500/10', count: `${entities.filter(e=>e.nombreTipoEntidad==='CLIENTE').length} clientes` },
         { id: 'stock', title: 'Stock', desc: 'Control y valorización de inventario', icon: 'bi-box-seam-fill', color: 'text-amber-500 bg-amber-500/10', count: `${products.length} productos` }
     ];
 
@@ -154,25 +154,22 @@
 
     // 1. VENTAS
     if (state.selectedReportId === 'ventas') {
-        const totalVendido = sales.filter(s => s.status !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
-        const cantVentas = sales.filter(s => s.status !== 'Anulado').length;
-        const ventasHoy = sales.filter(s => s.date.startsWith(todayStr) && s.status !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
-        const ventasMes = sales.filter(s => s.date.startsWith(currentMonthStr) && s.status !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
+        const totalVendido = sales.filter(s => s.estado?.nombreEstado !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
+        const cantVentas = sales.filter(s => s.estado?.nombreEstado !== 'Anulado').length;
+        const ventasHoy = sales.filter(s => s.fecha_emision && s.fecha_emision.startsWith(todayStr) && s.estado?.nombreEstado !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
+        const ventasMes = sales.filter(s => s.fecha_emision && s.fecha_emision.startsWith(currentMonthStr) && s.estado?.nombreEstado !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
 
         const filteredSales = sales.filter(s => {
-            if (state.reportsFilter.dateStart && s.date.split(' ')[0] < state.reportsFilter.dateStart) return false;
-            if (state.reportsFilter.dateEnd && s.date.split(' ')[0] > state.reportsFilter.dateEnd) return false;
-            if (state.reportsFilter.client && s.clientId !== parseInt(state.reportsFilter.client)) return false;
-            if (state.reportsFilter.seller && (s.seller || 'admin') !== state.reportsFilter.seller) return false;
-            if (state.reportsFilter.docType !== 'Todos' && s.docType !== state.reportsFilter.docType) return false;
+            if (state.reportsFilter.dateStart && s.fecha_emision && s.fecha_emision.split(' ')[0] < state.reportsFilter.dateStart) return false;
+            if (state.reportsFilter.dateEnd && s.fecha_emision && s.fecha_emision.split(' ')[0] > state.reportsFilter.dateEnd) return false;
+            if (state.reportsFilter.client && s.cliente?.idEntidad !== parseInt(state.reportsFilter.client)) return false;
+            if (state.reportsFilter.docType !== 'Todos' && s.tipo_comprobante !== state.reportsFilter.docType) return false;
             return true;
         });
 
-        const totalRango = filteredSales.filter(s => s.status !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
+        const totalRango = filteredSales.filter(s => s.estado?.nombreEstado !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
 
-        const clientOptions = entities.filter(e => e.type === 'CLIENTE').map(e => `<option value="${e.id}" ${parseInt(state.reportsFilter.client) === e.id ? 'selected' : ''}>${e.name}</option>`).join('');
-        const sellersList = [...new Set(sales.map(s => s.seller || 'admin'))];
-        const sellerOptions = sellersList.map(sel => `<option value="${sel}" ${state.reportsFilter.seller === sel ? 'selected' : ''}>${sel}</option>`).join('');
+        const clientOptions = entities.filter(e => e.nombreTipoEntidad === 'CLIENTE').map(e => `<option value="${e.idEntidad}" ${parseInt(state.reportsFilter.client) === e.idEntidad ? 'selected' : ''}>${e.nombre_RazonSocial}</option>`).join('');
 
         subHtml = `
             <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
@@ -198,7 +195,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[#334155]">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[#334155]">
                 <div class="form-group mb-0">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fecha Inicio</label>
                     <input type="date" class="form-control text-xs py-1.5 rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] w-full" value="${state.reportsFilter.dateStart}" onchange="window.updateReportFilter('dateStart', this.value)">
@@ -212,13 +209,6 @@
                     <select class="form-control text-xs py-1.5 rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] w-full" onchange="window.updateReportFilter('client', this.value)">
                         <option value="">Todos los Clientes</option>
                         ${clientOptions}
-                    </select>
-                </div>
-                <div class="form-group mb-0">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Vendedor</label>
-                    <select class="form-control text-xs py-1.5 rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] w-full" onchange="window.updateReportFilter('seller', this.value)">
-                        <option value="">Todos los Vendedores</option>
-                        ${sellerOptions}
                     </select>
                 </div>
                 <div class="form-group mb-0">
@@ -245,16 +235,17 @@
                     </thead>
                     <tbody class="divide-y divide-[#334155]">
                         ${filteredSales.map(s => {
-                            const cName = entities.find(e => e.id === s.clientId)?.name || 'Cliente Mostrador';
+                            const cName = s.cliente?.nombre_RazonSocial || 'Cliente Mostrador';
+                            const estadoVenta = s.estado?.nombreEstado || 'Activo';
                             return `
                                 <tr class="hover:bg-[#111827]/40 transition-colors">
-                                    <td class="p-3 text-[#F8FAFC]">${s.date}</td>
-                                    <td class="p-3 text-[#CBD5E1]">${s.docType}</td>
-                                    <td class="p-3 font-mono text-[#CBD5E1]">${s.correlative}</td>
+                                    <td class="p-3 text-[#F8FAFC]">${s.fecha_emision}</td>
+                                    <td class="p-3 text-[#CBD5E1]">${s.tipo_comprobante}</td>
+                                    <td class="p-3 font-mono text-[#CBD5E1]">${s.serie_correlativa}</td>
                                     <td class="p-3 text-[#CBD5E1]">${cName}</td>
                                     <td class="p-3 font-bold text-[#F8FAFC]">${formatMoney(s.total)}</td>
                                     <td class="p-3">
-                                        <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${s.status === 'Anulado' ? 'bg-red-500/20 text-red-400 border border-red-500/30':'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">${s.status}</span>
+                                        <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${estadoVenta === 'Anulado' ? 'bg-red-500/20 text-red-400 border border-red-500/30':'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">${estadoVenta}</span>
                                     </td>
                                 </tr>
                             `;
@@ -267,22 +258,19 @@
 
     // 2. COMPRAS
     else if (state.selectedReportId === 'compras') {
-        const totalComprado = purchases.reduce((sum, p) => sum + p.total, 0);
+        const totalComprado = purchases.reduce((sum, p) => sum + p.montoTotal, 0);
         const cantCompras = purchases.length;
 
         const filteredPurchases = purchases.filter(p => {
-            if (state.reportsFilter.dateStart && p.date < state.reportsFilter.dateStart) return false;
-            if (state.reportsFilter.dateEnd && p.date > state.reportsFilter.dateEnd) return false;
-            if (state.reportsFilter.supplier && p.providerId !== parseInt(state.reportsFilter.supplier)) return false;
-            if (state.reportsFilter.seller && (p.responsible || 'admin') !== state.reportsFilter.seller) return false;
+            if (state.reportsFilter.dateStart && p.fechaCompra && p.fechaCompra.split(' ')[0] < state.reportsFilter.dateStart) return false;
+            if (state.reportsFilter.dateEnd && p.fechaCompra && p.fechaCompra.split(' ')[0] > state.reportsFilter.dateEnd) return false;
+            if (state.reportsFilter.supplier && p.proveedor?.idEntidad !== parseInt(state.reportsFilter.supplier)) return false;
             return true;
         });
 
-        const totalRango = filteredPurchases.reduce((sum, p) => sum + p.total, 0);
+        const totalRango = filteredPurchases.reduce((sum, p) => sum + p.montoTotal, 0);
 
-        const supplierOptions = entities.filter(e => e.type === 'PROVEEDOR').map(e => `<option value="${e.id}" ${parseInt(state.reportsFilter.supplier) === e.id ? 'selected' : ''}>${e.name}</option>`).join('');
-        const buyersList = [...new Set(purchases.map(p => p.responsible || 'admin'))];
-        const buyerOptions = buyersList.map(buy => `<option value="${buy}" ${state.reportsFilter.seller === buy ? 'selected' : ''}>${buy}</option>`).join('');
+        const supplierOptions = entities.filter(e => e.nombreTipoEntidad === 'PROVEEDOR').map(e => `<option value="${e.idEntidad}" ${parseInt(state.reportsFilter.supplier) === e.idEntidad ? 'selected' : ''}>${e.nombre_RazonSocial}</option>`).join('');
 
         subHtml = `
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
@@ -300,7 +288,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[#334155]">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 p-4 rounded-xl bg-[#111827] border border-[#334155]">
                 <div class="form-group mb-0">
                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Fecha Inicio</label>
                     <input type="date" class="form-control text-xs py-1.5 rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] w-full" value="${state.reportsFilter.dateStart}" onchange="window.updateReportFilter('dateStart', this.value)">
@@ -316,13 +304,6 @@
                         ${supplierOptions}
                     </select>
                 </div>
-                <div class="form-group mb-0">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Responsable</label>
-                    <select class="form-control text-xs py-1.5 rounded-xl border-[#334155] bg-[#1F2937] text-[#F8FAFC] w-full" onchange="window.updateReportFilter('seller', this.value)">
-                        <option value="">Todos los Usuarios</option>
-                        ${buyerOptions}
-                    </select>
-                </div>
             </div>
 
             <div class="table-responsive overflow-x-auto">
@@ -333,22 +314,20 @@
                             <th class="p-3 font-semibold text-[#CBD5E1]">N° Factura</th>
                             <th class="p-3 font-semibold text-[#CBD5E1]">Proveedor</th>
                             <th class="p-3 font-semibold text-[#CBD5E1]">Total</th>
-                            <th class="p-3 font-semibold text-[#CBD5E1]">Responsable</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#334155]">
                         ${filteredPurchases.map(p => {
-                            const pName = entities.find(e => e.id === p.providerId)?.name || 'Proveedor Desconocido';
+                            const pName = p.proveedor?.nombre_RazonSocial || 'Proveedor Desconocido';
                             return `
                                 <tr class="hover:bg-[#111827]/40 transition-colors">
-                                    <td class="p-3 text-[#F8FAFC]">${p.date}</td>
-                                    <td class="p-3 font-mono text-[#CBD5E1]">${p.nroFactura}</td>
+                                    <td class="p-3 text-[#F8FAFC]">${p.fechaCompra}</td>
+                                    <td class="p-3 font-mono text-[#CBD5E1]">${p.serieCorrelativa}</td>
                                     <td class="p-3 text-[#CBD5E1]">${pName}</td>
-                                    <td class="p-3 font-bold text-[#F8FAFC]">${formatMoney(p.total)}</td>
-                                    <td class="p-3 text-[#CBD5E1]">${p.responsible || 'admin'}</td>
+                                    <td class="p-3 font-bold text-[#F8FAFC]">${formatMoney(p.montoTotal)}</td>
                                 </tr>
                             `;
-                        }).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">No se encontraron compras para este filtro.</td></tr>'}
+                        }).join('') || '<tr><td colspan="4" class="p-4 text-center text-slate-500">No se encontraron compras para este filtro.</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -357,13 +336,13 @@
 
     // 3. CLIENTES
     else if (state.selectedReportId === 'clientes') {
-        const clientList = entities.filter(e => e.type === 'CLIENTE');
+        const clientList = entities.filter(e => e.nombreTipoEntidad === 'CLIENTE');
         const query = state.reportSearchQuery.toLowerCase().trim();
-        const filteredClients = clientList.filter(c => {
-            return c.document.toLowerCase().includes(query) || 
-                   c.name.toLowerCase().includes(query) ||
-                   (c.phone && c.phone.toLowerCase().includes(query)) ||
-                   (c.email && c.email.toLowerCase().includes(query));
+        const filteredClients = clientList.filter(cl => {
+            return (cl.numeroDocumento || '').toLowerCase().includes(query) ||
+                   (cl.nombre_RazonSocial || '').toLowerCase().includes(query) ||
+                   (cl.telefono && cl.telefono.toLowerCase().includes(query)) ||
+                   (cl.email && cl.email.toLowerCase().includes(query));
         });
 
         subHtml = `
@@ -393,16 +372,16 @@
                     </thead>
                     <tbody class="divide-y divide-[#334155]">
                         ${filteredClients.map(cl => `
-                            <tr onclick="window.openClientDetailModal(${cl.id})" class="cursor-pointer hover:bg-[#334155]/20 transition-colors">
-                                <td class="p-3 font-mono text-[#F8FAFC]">${cl.document}</td>
-                                <td class="p-3 font-bold text-[#F8FAFC]">${cl.name}</td>
-                                <td class="p-3 text-[#CBD5E1]">${cl.phone || '-'}</td>
+                            <tr onclick="window.openClientDetailModal(${cl.idEntidad})" class="cursor-pointer hover:bg-[#334155]/20 transition-colors">
+                                <td class="p-3 font-mono text-[#F8FAFC]">${cl.numeroDocumento}</td>
+                                <td class="p-3 font-bold text-[#F8FAFC]">${cl.nombre_RazonSocial}</td>
+                                <td class="p-3 text-[#CBD5E1]">${cl.telefono || '-'}</td>
                                 <td class="p-3 text-[#CBD5E1]">${cl.email || '-'}</td>
                                 <td class="p-3">
-                                    <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${cl.status === 'Activo' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30':'bg-slate-500/20 text-slate-400 border border-slate-500/30'}">${cl.status}</span>
+                                    <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${cl.nombreEstado === 'Activo' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30':'bg-slate-500/20 text-slate-400 border border-slate-500/30'}">${cl.nombreEstado}</span>
                                 </td>
                                 <td class="p-3 text-right">
-                                    <button class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded-lg border border-blue-600/20 font-bold transition-all text-[11px]" onclick="event.stopPropagation(); window.openClientDetailModal(${cl.id})">
+                                    <button class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white px-2.5 py-1 rounded-lg border border-blue-600/20 font-bold transition-all text-[11px]" onclick="event.stopPropagation(); window.openClientDetailModal(${cl.idEntidad})">
                                         <i class="bi bi-folder2-open"></i> Ficha
                                     </button>
                                 </td>
@@ -434,8 +413,10 @@
         const totalValuation = products.reduce((sum, p) => sum + (p.stock * p.precio_venta), 0);
 
         const filteredProducts = products.filter(p => {
-            if (state.reportsFilter.category && state.reportsFilter.category !== 'Todos' && p.categoria?.nombreCategoria !== state.reportsFilter.category) return false;
-            if (state.reportsFilter.product && !(p.nombre_descripcion.toLowerCase().includes(state.reportsFilter.product.toLowerCase()) || String(p.codigo_unico || p.codigo_barras || p.id_producto).toLowerCase().includes(state.reportsFilter.product.toLowerCase()))) return false;
+
+            const catName = p.categoria?.nombreCategoria || 'General';
+            if (state.reportsFilter.category && state.reportsFilter.category !== 'Todos' && catName !== state.reportsFilter.category) return false;
+            if (state.reportsFilter.product && !(p.nombre_descripcion.toLowerCase().includes(state.reportsFilter.product.toLowerCase()) || p.codigo_unico.toLowerCase().includes(state.reportsFilter.product.toLowerCase()))) return false;
             if (state.reportsFilter.stockBajo && p.stock > p.stock_minimo) return false;
             return true;
         });
@@ -504,13 +485,22 @@
                                 statusText = 'Bajo';
                                 badgeClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
                             }
+                            const unidadNombre = p.unidad?.nombre || 'Unid';
                             return `
                                 <tr>
+<<<<<<< HEAD
                                     <td class="p-3 font-mono text-[#F8FAFC]">${p.codigo_unico || p.codigo_barras || p.id_producto}</td>
                                     <td class="p-3 font-bold text-[#F8FAFC]">${p.nombre_descripcion}</td>
                                     <td class="p-3 text-[#CBD5E1]">${p.categoria?.nombreCategoria || '-'}</td>
                                     <td class="p-3 font-bold ${p.stock <= p.stock_minimo ? 'text-red-400':'text-[#F8FAFC]'}">${p.stock} ${p.unidad?.nombre || ''}</td>
                                     <td class="p-3 text-[#CBD5E1]">${p.stock_minimo} ${p.unidad?.nombre || ''}</td>
+=======
+                                    <td class="p-3 font-mono text-[#F8FAFC]">${p.codigo_unico}</td>
+                                    <td class="p-3 font-bold text-[#F8FAFC]">${p.nombre_descripcion}</td>
+                                    <td class="p-3 text-[#CBD5E1]">${p.categoria?.nombreCategoria || 'General'}</td>
+                                    <td class="p-3 font-bold ${p.stock <= p.stock_minimo ? 'text-red-400':'text-[#F8FAFC]'}">${p.stock} ${unidadNombre}</td>
+                                    <td class="p-3 text-[#CBD5E1]">${p.stock_minimo} ${unidadNombre}</td>
+>>>>>>> 7bab5fe (Actualizacion del Dash)
                                     <td class="p-3">
                                         <span class="inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">${statusText}</span>
                                     </td>
@@ -553,43 +543,46 @@
         </div>
     `;
 }
-
 // Client History & Detail modal
 window.openClientDetailModal = async (clientId) => {
-    const client = state.caches.clients.find(x => x.id === clientId) || 
-                   (await api.getEntities()).find(x => x.id === clientId);
+    const entidadesCache = state.caches.entities?.length ? state.caches.entities : await api.getEntities();
+    const client = entidadesCache.find(x => x.idEntidad === clientId);
     if (!client) return Swal.fire({ icon: 'error', title: 'Error', text: 'No se encontró la información del cliente.' });
 
     const sales = await api.getSales();
     const purchases = await api.getPurchases();
-    const entities = await api.getEntities();
+    const entities = entidadesCache;
     const proformas = MOCK_DB.proformas || [];
 
-    const clientSales = sales.filter(s => s.clientId === clientId).sort((a,b) => b.id - a.id);
-    const totalComprado = clientSales.filter(s => s.status !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
+    const clientSales = sales.filter(s => s.cliente?.idEntidad === clientId).sort((a, b) => b.idVenta - a.idVenta);
+    const totalComprado = clientSales.filter(s => s.estado?.nombreEstado !== 'Anulado').reduce((sum, s) => sum + s.total, 0);
 
-    const providerProfile = entities.find(e => e.document === client.document && e.type === 'PROVEEDOR');
-    const associatedPurchases = providerProfile ? purchases.filter(p => p.providerId === providerProfile.id).sort((a,b) => b.id - a.id) : [];
+    // Una misma persona/empresa puede estar registrada también como proveedor
+    // (mismo número de documento, tipo de entidad distinto).
+    const providerProfile = entities.find(e => e.numeroDocumento === client.numeroDocumento && e.nombreTipoEntidad === 'PROVEEDOR');
+    const associatedPurchases = providerProfile
+        ? purchases.filter(p => p.proveedor?.idEntidad === providerProfile.idEntidad).sort((a, b) => b.idCompra - a.idCompra)
+        : [];
 
     const clientProformas = proformas.filter(p => p.clientId === clientId).sort((a,b) => b.id - a.id);
 
     const generalTabHtml = `
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Documento (${client.docType})</span>
-                <span class="text-sm font-bold text-slate-800 font-mono">${client.document}</span>
+                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Documento (${client.tipoDocumento})</span>
+                <span class="text-sm font-bold text-slate-800 font-mono">${client.numeroDocumento}</span>
             </div>
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nombre o Razón Social</span>
-                <span class="text-sm font-bold text-slate-800">${client.name}</span>
+                <span class="text-sm font-bold text-slate-800">${client.nombre_RazonSocial}</span>
             </div>
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 sm:col-span-2">
                 <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Dirección Fiscal</span>
-                <span class="text-sm font-semibold text-slate-700">${client.address || '-'}</span>
+                <span class="text-sm font-semibold text-slate-700">${client.direccion || '-'}</span>
             </div>
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Teléfono</span>
-                <span class="text-sm font-semibold text-slate-700">${client.phone || '-'}</span>
+                <span class="text-sm font-semibold text-slate-700">${client.telefono || '-'}</span>
             </div>
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Correo Electrónico</span>
@@ -615,17 +608,20 @@ window.openClientDetailModal = async (clientId) => {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    ${clientSales.map(s => `
+                    ${clientSales.map(s => {
+                        const estadoVenta = s.estado?.nombreEstado || 'Activo';
+                        return `
                         <tr>
-                            <td class="p-2.5 text-slate-600">${s.date}</td>
-                            <td class="p-2.5 text-slate-800 font-semibold">${s.docType}</td>
-                            <td class="p-2.5 text-slate-700 font-mono">${s.correlative}</td>
+                            <td class="p-2.5 text-slate-600">${s.fecha_emision}</td>
+                            <td class="p-2.5 text-slate-800 font-semibold">${s.tipo_comprobante}</td>
+                            <td class="p-2.5 text-slate-700 font-mono">${s.serie_correlativa}</td>
                             <td class="p-2.5 font-bold text-slate-900">${formatMoney(s.total)}</td>
                             <td class="p-2.5">
-                                <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${s.status==='Anulado' ? 'bg-red-100 text-red-800':'bg-emerald-100 text-emerald-800'}">${s.status}</span>
+                                <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${estadoVenta === 'Anulado' ? 'bg-red-100 text-red-800':'bg-emerald-100 text-emerald-800'}">${estadoVenta}</span>
                             </td>
                         </tr>
-                    `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No se registran transacciones de venta.</td></tr>'}
+                    `;
+                    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-400">No se registran transacciones de venta.</td></tr>'}
                 </tbody>
             </table>
         </div>
@@ -634,7 +630,7 @@ window.openClientDetailModal = async (clientId) => {
     const purchasesTabHtml = providerProfile ? `
         <div class="flex justify-between items-center mb-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
             <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total Adquisiciones como Proveedor</span>
-            <h3 class="text-xl font-black text-emerald-700">${formatMoney(associatedPurchases.reduce((sum, p) => sum + p.total, 0))}</h3>
+            <h3 class="text-xl font-black text-emerald-700">${formatMoney(associatedPurchases.reduce((sum, p) => sum + p.montoTotal, 0))}</h3>
         </div>
         <div class="overflow-x-auto rounded-xl border border-slate-150 max-h-[250px] custom-scrollbar">
             <table class="w-full text-left text-xs border-collapse">
@@ -648,9 +644,9 @@ window.openClientDetailModal = async (clientId) => {
                 <tbody class="divide-y divide-slate-100">
                     ${associatedPurchases.map(p => `
                         <tr>
-                            <td class="p-2.5 text-slate-600">${p.date}</td>
-                            <td class="p-2.5 text-slate-700 font-mono">${p.nroFactura}</td>
-                            <td class="p-2.5 font-bold text-slate-900">${formatMoney(p.total)}</td>
+                            <td class="p-2.5 text-slate-600">${p.fechaCompra}</td>
+                            <td class="p-2.5 text-slate-700 font-mono">${p.serieCorrelativa}</td>
+                            <td class="p-2.5 font-bold text-slate-900">${formatMoney(p.montoTotal)}</td>
                         </tr>
                     `).join('') || '<tr><td colspan="3" class="p-4 text-center text-slate-400">No se registran facturas de compra asociadas.</td></tr>'}
                 </tbody>
@@ -660,7 +656,7 @@ window.openClientDetailModal = async (clientId) => {
         <div class="py-10 text-center">
             <i class="bi bi-exclamation-octagon text-3xl text-amber-500 mb-2 block"></i>
             <h4 class="font-bold text-sm text-slate-800">No Registrado como Proveedor</h4>
-            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Esta entidad no posee un perfil activo de tipo PROVEEDOR con RUC/DNI (${client.document}).</p>
+            <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Esta entidad no posee un perfil activo de tipo PROVEEDOR con RUC/DNI (${client.numeroDocumento}).</p>
         </div>
     `;
 
@@ -700,7 +696,7 @@ window.openClientDetailModal = async (clientId) => {
             <div class="flex justify-between items-start">
                 <div>
                     <h3 class="text-lg font-bold text-slate-900">Ficha Comercial del Cliente</h3>
-                    <p class="text-xs text-blue-600 font-semibold mt-0.5">${client.name} • ${client.docType} ${client.document}</p>
+                    <p class="text-xs text-blue-600 font-semibold mt-0.5">${client.nombre_RazonSocial} • ${client.tipoDocumento} ${client.numeroDocumento}</p>
                 </div>
                 <button class="text-slate-400 hover:text-slate-600 text-2xl font-black" onclick="closeModal(event)">&times;</button>
             </div>

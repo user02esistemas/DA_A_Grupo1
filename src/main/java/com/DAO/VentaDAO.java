@@ -9,18 +9,17 @@ import com.DTO.DetallePagoDTO;
 import com.DTO.DetalleVentaDTO;
 import com.DTO.EntidadesDTO;
 import com.DTO.EstadosSistemaDTO;
+import com.DTO.MetodosPagoDTO;
 import com.DTO.MovimientosDTO;
 import com.DTO.PagoDTO;
-import com.DTO.MetodosPagoDTO;
-
 import com.DTO.ProductosDTO;
-
 import com.DTO.VentaDTO;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.Query;
+
 
 public class VentaDAO {
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("SDDGPU");
@@ -613,12 +612,9 @@ public class VentaDAO {
                 VentaDTO venta = new VentaDTO();
                 venta.setIdVenta(((Number) fila[0]).intValue());
                 venta.setSerie_correlativa((String) fila[1]);
-
-                venta.setTipo_comprobante((String) fila[2]); 
+                venta.setTipo_comprobante((String) fila[2]);
                 venta.setFecha_emision((java.util.Date) fila[3]);
                 venta.setTotal(((Number) fila[4]).doubleValue());
-
-               
 
                 EntidadesDTO cliente = new EntidadesDTO();
                 cliente.setIdEntidad(((Number) fila[5]).intValue());
@@ -750,4 +746,3 @@ public class VentaDAO {
         return lista;
     }
 }
-

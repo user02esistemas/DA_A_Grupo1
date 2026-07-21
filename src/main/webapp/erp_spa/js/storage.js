@@ -437,7 +437,14 @@
         },
 
         async getInstallments() {
-           return [];
+            try {
+                const response = await fetch('VentaController?action=listarCuotas');
+                if (!response.ok) throw new Error(`Error en el servidor: ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                console.error('Error al obtener las cuotas:', e);
+                return [];
+            }
         },
         
         async paySaleInstallments(saleId, amount) {
@@ -471,7 +478,14 @@
         },
 
         async getSales() {
-            return [];
+            try {
+                const response = await fetch('VentaController?action=listarVentas');
+                if (!response.ok) throw new Error(`Error en el servidor: ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                console.error('Error al obtener las ventas:', e);
+                return [];
+            }
         },
 
         async getMovements(productId) {            

@@ -119,18 +119,7 @@
             color: 'text-emerald-500 bg-emerald-500/10'
         });
     });
-    entities.forEach(e => {
-        timeline.push({
-
-            time: e.idEntidad ? new Date(e.idEntidad).toISOString().split('T')[0] + ' 12:00:00' : todayStr + ' 12:00:00',
-            label: `${e.nombreTipoEntidad === 'CLIENTE' ? 'Cliente' : 'Proveedor'} Creado`,
-            desc: e.nombre_RazonSocial,
-            amount: null,
-            isNegative: false,
-            icon: 'fa-user-plus',
-            color: 'text-indigo-500 bg-indigo-500/10'
-        });
-    });
+    
     movements.forEach(m => {
         timeline.push({
 

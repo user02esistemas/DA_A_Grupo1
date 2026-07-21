@@ -1,9 +1,14 @@
 package com.DAO;
-import com.DTO.*;
-
-
 import java.util.ArrayList;
 import java.util.List;
+
+import com.DTO.CompraDTO;
+import com.DTO.DetalleCompraDTO;
+import com.DTO.EntidadesDTO;
+import com.DTO.LotesDTO;
+import com.DTO.MovimientosDTO;
+import com.DTO.ProductosDTO;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -155,7 +160,7 @@ public class CompraDAO {
     }
 
 
-     @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked")
     public List<CompraDTO> listarTodasCompras(){
         EntityManager em = emf.createEntityManager();
         List<CompraDTO> listaCompras = new ArrayList<>();
@@ -166,9 +171,12 @@ public class CompraDAO {
                 C.serie_correlativa,
                 E.nombre_razon_social,
                 C.fecha_compra,
-                C.monto_total
+                C.monto_total,
+                E.id_entidad,
+                C.tipo_comprobante
                 FROM compras AS C
                 INNER JOIN entidades AS E ON C.id_proveedor = E.id_entidad
+                ORDER BY C.id_compra DESC
                 """;
         
         try {
@@ -182,10 +190,12 @@ public class CompraDAO {
                 
                 EntidadesDTO proveedor = new EntidadesDTO();
                 proveedor.setNombre_RazonSocial((String)fila[2]);
+                proveedor.setIdEntidad(((Number)fila[5]).intValue());
                 compra.setProveedor(proveedor);
 
                 compra.setFechaCompra(new java.sql.Date(((java.util.Date) fila[3]).getTime()));
                 compra.setMontoTotal(((Number)fila[4]).doubleValue());
+                compra.setTipoComprobante((String)fila[6]);
 
                 listaCompras.add(compra);
             }
@@ -297,5 +307,6 @@ public class CompraDAO {
 
         return compra;
     }
-
+    
+    
 }

@@ -589,3 +589,65 @@ body.light-theme input:disabled, body.light-theme select:disabled, body.light-th
     color: #94A3B8 !important;
     border-color: #E2E8F0 !important;
 }
+
+/* ==========================================================
+   Campos de formulario: regla global por etiqueta.
+   Muchas páginas del SPA generan sus <input>/<select>/<textarea>
+   con clases de Tailwind escritas a mano (bg-white, bg-slate-50,
+   etc.) sin pensar en el tema oscuro. En vez de perseguir cada
+   campo uno por uno, se fuerza aquí el color correcto por tipo de
+   etiqueta, con !important, para que gane sin importar qué clase
+   traiga puesta el HTML.
+   ========================================================== */
+
+/* Modo oscuro (por defecto, cuando el body NO tiene .light-theme) */
+body:not(.light-theme) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+body:not(.light-theme) select,
+body:not(.light-theme) textarea {
+    background-color: #1F2937 !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+    color-scheme: dark;
+}
+
+body:not(.light-theme) input::placeholder,
+body:not(.light-theme) textarea::placeholder {
+    color: #64748B !important;
+    opacity: 1;
+}
+
+body:not(.light-theme) input:disabled,
+body:not(.light-theme) select:disabled,
+body:not(.light-theme) textarea:disabled {
+    background-color: #111827 !important;
+    color: #64748B !important;
+    border-color: #1F2937 !important;
+}
+
+/* Modo claro: mismo criterio pero al revés, por si algún campo
+   nuevo se agrega ya pensado en oscuro por defecto. */
+body.light-theme input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+body.light-theme select,
+body.light-theme textarea {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #E2E8F0 !important;
+    color-scheme: light;
+}
+
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+    color: #94A3B8 !important;
+    opacity: 1;
+}
+
+/* El "papel" de comprobantes/fichas imprimibles debe verse SIEMPRE
+   claro, sin importar el tema. Si alguna vez se agrega un <input>
+   dentro de #print-area, esta regla lo protege de las de arriba. */
+#print-area input,
+#print-area select,
+#print-area textarea {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #E2E8F0 !important;
+}

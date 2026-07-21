@@ -1,30 +1,35 @@
 package com.Control;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.DAO.CompraDAO;
+import com.DAO.OrdenDAO;
+import com.DTO.CompraDTO;
+import com.DTO.DetalleCompraDTO;
+import com.DTO.DetalleOrdenDTO;
+import com.DTO.OrdenCompraDTO;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import com.DTO.*;
-import com.DAO.*;
-import java.util.*;
-
 @WebServlet("/CompraController")
 public class CompraController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private OrdenDAO ordenDAO = new OrdenDAO();
     private CompraDAO compraDAO = new CompraDAO();
-    private Gson gson = new Gson();
-
+    // Formato fijo para que el front pueda comparar fechas como texto (yyyy-MM-dd)
+    // sin depender del idioma o la configuración regional del servidor.
+    private Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("application/json");

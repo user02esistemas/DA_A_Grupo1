@@ -22,6 +22,8 @@ import com.google.gson.JsonObject;
 public class VentaController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     VentaDAO ventaDAO = new VentaDAO();
+    // Formato fijo para que el front pueda comparar fechas como texto (yyyy-MM-dd)
+    // sin depender del idioma o la configuración regional del servidor.
     Gson gson = new GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create();
 
 
