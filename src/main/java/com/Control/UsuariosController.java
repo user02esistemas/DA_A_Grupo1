@@ -1,10 +1,11 @@
 package com.Control;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.DAO.RolesDAO;
 import com.DAO.UsuariosDAO;
@@ -12,10 +13,11 @@ import com.DTO.RolesDTO;
 import com.DTO.UsuariosDTO;
 import com.google.gson.Gson;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.io.*;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 
 @WebServlet("/UsuariosController")
@@ -85,6 +87,32 @@ public class UsuariosController extends HttpServlet {
 
             switch (action) {
                 case "insertar":
+                    if (usuario == null || usuario.getIdEntidad() == null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"Debe seleccionar un trabajador válido.\"}");
+                        break;
+                    }
+                    if (usuario.getUsuario() == null || usuario.getUsuario().trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"El nombre de usuario es obligatorio.\"}");
+                        break;
+                    }
+                    if (usuario.getIdRol() == null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"Debe seleccionar un rol.\"}");
+                        break;
+                    }
+                   if (usuario.getPaswordHash() == null || usuario.getPaswordHash().trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"La contraseña es obligatoria para un usuario nuevo.\"}");
+                        break;
+                    }
+                    if (usuario.getPaswordHash().length() < 3 || usuario.getPaswordHash().length() > 6) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"La contraseña debe tener entre 3 y 6 caracteres.\"}");
+                        break;
+                    }
+
                     boolean insertado = usuDAO.insertarUsuario(usuario);
                     if(insertado){
                         response.setStatus(HttpServletResponse.SC_OK);
@@ -94,7 +122,62 @@ public class UsuariosController extends HttpServlet {
                         out.print("{\"success\": false, \"error\": \"Error interno en la base de datos al insertar\"}");
                     }
                     break;
-                    
+
+                case "actualizar":
+                    if (usuario == null || usuario.getIdUsuario() == null || usuario.getIdUsuario() <= 0) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"ID de usuario no válido.\"}");
+                        break;
+                    }
+                    if (usuario.getIdEntidad() == null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"Debe seleccionar un trabajador válido.\"}");
+                        break;
+                    }
+                    if (usuario.getUsuario() == null || usuario.getUsuario().trim().isEmpty()) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"El nombre de usuario es obligatorio.\"}");
+                        break;
+                    }
+                    if (usuario.getIdRol() == null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"Debe seleccionar un rol.\"}");
+                        break;
+                    }
+
+                    if (usuario.getPaswordHash() != null && !usuario.getPaswordHash().trim().isEmpty()
+                            && (usuario.getPaswordHash().length() < 3 || usuario.getPaswordHash().length() > 6)) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"La contraseña debe tener entre 3 y 6 caracteres.\"}");
+                        break;
+                    }
+
+                    boolean actualizado = usuDAO.actualizarUsuario(usuario);
+                    if(actualizado){
+                        response.setStatus(HttpServletResponse.SC_OK);
+                        out.print("{\"success\": true, \"message\": \"Usuario actualizado con éxito\"}");
+                    } else{
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
+                        out.print("{\"success\": false, \"error\": \"Error interno en la base de datos al actualizar\"}");
+                    }
+                    break;
+
+                case "eliminar":
+                    if (usuario == null || usuario.getIdUsuario() == null || usuario.getIdUsuario() <= 0) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.print("{\"success\": false, \"error\": \"ID de usuario no válido\"}");
+                        break;
+                    }
+                    boolean eliminado = usuDAO.eliminarUsuario(usuario.getIdUsuario());
+                    if(eliminado){
+                        response.setStatus(HttpServletResponse.SC_OK);
+                        out.print("{\"success\": true, \"message\": \"Usuario inhabilitado con éxito\"}");
+                    } else{
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); 
+                        out.print("{\"success\": false, \"error\": \"Error interno al inhabilitar el usuario\"}");
+                    }
+                    break;
+
                 case "login":
                     UsuariosDTO logeado = usuDAO.confimarCredenciales(usuario.getUsuario(), usuario.getPaswordHash());
                     

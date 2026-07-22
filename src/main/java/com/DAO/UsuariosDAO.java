@@ -1,14 +1,16 @@
 package com.DAO;
 
-import com.DTO.UsuariosDTO;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.mindrot.jbcrypt.BCrypt;
+
+import com.DTO.UsuariosDTO;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.Query;
-import org.mindrot.jbcrypt.BCrypt;
 
 public class UsuariosDAO {
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("SDDGPU");
@@ -114,7 +116,10 @@ public class UsuariosDAO {
                     Ent.nombre_razon_social,
                     Us.usuario,
                     R.nombre AS Rol,
-                    Est.nombre AS Estado
+                    Est.nombre AS Estado,
+                    Us.id_entidad,
+                    Us.id_rol,
+                    Us.id_estado
                 FROM usuarios AS Us
                 INNER JOIN entidades AS Ent ON Us.id_entidad = Ent.id_entidad
                 INNER JOIN roles AS R ON Us.id_rol = R.id_rol
@@ -133,6 +138,9 @@ public class UsuariosDAO {
                 usu.setUsuario((String)fila[2]);
                 usu.setNombreRol((String)fila[3]);
                 usu.setNombreEstado((String)fila[4]);
+                usu.setIdEntidad(((Number) fila[5]).intValue());
+                usu.setIdRol(((Number) fila[6]).intValue());
+                usu.setIdEstado(((Number) fila[7]).intValue());
                 listUsu.add(usu);
             }
         }catch (Exception e) {
@@ -141,5 +149,91 @@ public class UsuariosDAO {
             em.close();
         }
         return listUsu;
+    }
+
+    
+    public boolean actualizarUsuario(UsuariosDTO usu){
+        EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            boolean cambiaPassword = usu.getPaswordHash() != null && !usu.getPaswordHash().trim().isEmpty();
+
+            String sql;
+            if (cambiaPassword) {
+                sql = """
+                        UPDATE usuarios
+                        SET id_entidad = ?1,
+                            usuario = ?2,
+                            password = ?3,
+                            id_rol = ?4,
+                            id_estado = ?5
+                        WHERE id_usuario = ?6
+                        """;
+            } else {
+                sql = """
+                        UPDATE usuarios
+                        SET id_entidad = ?1,
+                            usuario = ?2,
+                            id_rol = ?3,
+                            id_estado = ?4
+                        WHERE id_usuario = ?5
+                        """;
+            }
+
+            Query query = em.createNativeQuery(sql)
+                    .setParameter(1, usu.getIdEntidad());
+
+            if (cambiaPassword) {
+                String hashSeguro = BCrypt.hashpw(usu.getPaswordHash(), BCrypt.gensalt());
+                query.setParameter(2, usu.getUsuario())
+                     .setParameter(3, hashSeguro)
+                     .setParameter(4, usu.getIdRol())
+                     .setParameter(5, usu.getIdEstado() != null ? usu.getIdEstado() : 15)
+                     .setParameter(6, usu.getIdUsuario());
+            } else {
+                query.setParameter(2, usu.getUsuario())
+                     .setParameter(3, usu.getIdRol())
+                     .setParameter(4, usu.getIdEstado() != null ? usu.getIdEstado() : 15)
+                     .setParameter(5, usu.getIdUsuario());
+            }
+
+            int filasAfectadas = query.executeUpdate();
+
+            em.getTransaction().commit();
+            return filasAfectadas > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
+    }
+
+    
+    public boolean eliminarUsuario(int idUsuario){
+        EntityManager em = emf.createEntityManager();
+        String sql = "UPDATE usuarios SET id_estado = 16 WHERE id_usuario = ?1";
+
+        try {
+            em.getTransaction().begin();
+            int filasAfectadas = em.createNativeQuery(sql)
+                .setParameter(1, idUsuario)
+                .executeUpdate();
+
+            em.getTransaction().commit();
+            return filasAfectadas > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return false;
+        } finally {
+            em.close();
+        }
     }
 }

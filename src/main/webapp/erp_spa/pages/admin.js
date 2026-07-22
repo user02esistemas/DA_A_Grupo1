@@ -21,6 +21,9 @@
                 <button class="p-2 text-[#CBD5E1] hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors" onclick="openUserModal(${u.idUsuario})">
                     <i class="bi bi-pencil-square text-lg"></i>
                 </button>
+                <button class="p-2 text-[#CBD5E1] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors ml-1" onclick="window.deleteUser(${u.idUsuario})">
+                    <i class="bi bi-trash text-lg"></i>
+                </button>
             </td>
         </tr>
     `).join('');
@@ -113,11 +116,12 @@ window.openUserModal = async (id = null) => {
     const u = id ? state.caches.users.find(x => x.idUsuario === id) : {
         idUsuario: null,
         idEntidad: null,
-        nombreEntidad:'',
-        username: '', 
-        password: '', 
-        idRole: '', 
-        idEstado: null};
+        nombreEntidad: '',
+        usuario: '',
+        password: '',
+        idRol: null,
+        idEstado: null
+    };
 
     const roles = await api.getRoles();
 
@@ -141,12 +145,12 @@ window.openUserModal = async (id = null) => {
             <form id="user-form" class="space-y-4">
                 <input type="hidden" id="u-id" value="${u.idUsuario || ''}">
                 <input type="hidden" id="u-id-entidad" value="${u.idEntidad || ''}">
-                <div class = "relative">
+                <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre Real (Trabajador)</label>
                     <input type="text" id="u-entidad-buscar" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" 
-                    value="${u.nombreEntidad}"  
-                    placeholder="Busacar nombre o DNI ..."
-                    autocomplete = "off" required ${id ? 'disable' : ''}>
+                    value="${u.nombreEntidad || ''}"  
+                    placeholder="Buscar nombre o DNI ..."
+                    autocomplete="off" required ${id ? 'disabled' : ''}>
 
                     <div id="u-entidad-resultado" class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg hidden max-h-40 overflow-y-auto">
                     </div>
@@ -154,23 +158,23 @@ window.openUserModal = async (id = null) => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre de Usuario</label>
-                        <input type="text" id="u-username" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${u.username}" required placeholder="Ej. jperez">
+                        <input type="text" id="u-username" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${u.usuario || ''}" required placeholder="Ej. jperez">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Contraseña</label>
-                        <input type="password" id="u-password" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" ${id ? 'placeholder="Dejar en blanco para conservar"' : 'required'}>
+                        <input type="password" id="u-password" maxlength="6" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" ${id ? 'placeholder="Dejar en blanco para conservar"' : 'required'}>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Rol</label>
                         <select id="u-role" class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5">
-                            <option value="" ${!u.idRole ? 'selected' : ''} disable>
+                            <option value="" ${!u.idRol ? 'selected' : ''} disabled>
                                 Seleccione Rol ...
                             </option>
                             
-                            ${roles.map(r =>`
-                                <option value = "${r.idRol}" ${u.idRole === r.idRol ? 'selected' : ''}>
+                            ${roles.map(r => `
+                                <option value="${r.idRol}" ${u.idRol === r.idRol ? 'selected' : ''}>
                                     ${r.nombreRol.toUpperCase()}
                                 </option>
                                 `).join('')}
@@ -200,8 +204,7 @@ window.openUserModal = async (id = null) => {
     
     const trabajadores = state.caches.entities.filter(e => (e.nombreTipoEntidad || '').toUpperCase() === 'TRABAJADOR');
 
-
-    busqueda.addEventListener('input', (e) =>{
+    busqueda.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase().trim();
         hiddenIdInput.value = '';
 
@@ -249,26 +252,34 @@ window.openUserModal = async (id = null) => {
         const pass = document.getElementById('u-password').value;
         const statusEl = document.getElementById('u-status');
         const roleSele = document.getElementById('u-role');
+        const usernameVal = document.getElementById('u-username').value.trim();
 
+        // Validaciones en el front, antes de gastar una llamada al servidor
         if (!idEnt) {
-            alert("Debe seleccionar un trabajador válido de la lista.");
+            Swal.fire({ icon: 'warning', title: 'Falta el trabajador', text: 'Debe seleccionar un trabajador válido de la lista.' });
             return;
         }
-
-        if(!roleSele.value){
-            alert("Debe seleccionar un rol para el usuario.");
+        if (!usernameVal) {
+            Swal.fire({ icon: 'warning', title: 'Falta el usuario', text: 'El nombre de usuario es obligatorio.' });
             return;
         }
-
-        if (!uid && !pass) {
-            alert("La contraseña es obligatoria para un usuario nuevo.");
+        if (!roleSele.value) {
+            Swal.fire({ icon: 'warning', title: 'Falta el rol', text: 'Debe seleccionar un rol para el usuario.' });
+            return;
+        }
+       if (!uid && !pass) {
+            Swal.fire({ icon: 'warning', title: 'Falta la contraseña', text: 'La contraseña es obligatoria para un usuario nuevo.' });
+            return;
+        }
+        if (pass && (pass.length < 3 || pass.length > 6)) {
+            Swal.fire({ icon: 'warning', title: 'Contraseña inválida', text: 'La contraseña debe tener entre 3 y 6 caracteres.' });
             return;
         }
         
-        const usuarioDTO= {
+        const usuarioDTO = {
             idUsuario: uid ? parseInt(uid) : 0,
             idEntidad: parseInt(idEnt),
-            usuario: document.getElementById('u-username').value.trim(),
+            usuario: usernameVal,
             idRol: parseInt(roleSele.value),
             idEstado: statusEl ? parseInt(statusEl.value) : 15
         };
@@ -280,23 +291,21 @@ window.openUserModal = async (id = null) => {
         const btnSubmit = ev.target.querySelector('button[type="submit"]');
         const originalText = btnSubmit.innerHTML;
         
-       try {
-            
+        try {
             btnSubmit.innerHTML = 'Guardando...';
             btnSubmit.disabled = true;
 
-            
             await api.saveUser(usuarioDTO);
             
             closeModal();
             
-            alert('Usuario guardado exitosamente.');
+            Swal.fire({ icon: 'success', title: 'Listo', text: 'Usuario guardado exitosamente.' });
             
             if (typeof window.renderAdmin === 'function') {
-                window.renderAdmin(document.getElementById('main-area') || c); 
+                window.renderAdmin(document.getElementById('main-area') || document.querySelector('.content-area'));
             }
         } catch (error) {
-            alert(error.message);
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
             btnSubmit.innerHTML = originalText;
             btnSubmit.disabled = false;
         }
@@ -389,6 +398,28 @@ window.openExchangeRateModal = (id = null) => {
         closeModal();
         if (typeof window.renderLayout === 'function') window.renderLayout();
     };
+};
+window.deleteUser = async (id) => {
+    const result = await Swal.fire({
+        title: '¿Inhabilitar este usuario?',
+        text: 'El usuario quedará inactivo y no podrá iniciar sesión. Esta acción se puede revertir editándolo de nuevo.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, inhabilitar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        await api.deleteUser(id);
+        Swal.fire({ icon: 'success', title: 'Listo', text: 'Usuario inhabilitado correctamente.' });
+        window.renderAdmin(document.getElementById('main-area') || document.querySelector('.content-area'));
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+    }
 };
 
 window.renderAdmin = renderAdmin;

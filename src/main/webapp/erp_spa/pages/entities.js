@@ -138,10 +138,10 @@ window.updateEntitiesTable = function() {
                         <i class="bi bi-clock-history text-lg"></i>
                     </button>
                 ` : ''}
-                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.id})">
+                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.idEntidad})">
                     <i class="bi bi-pencil-square text-lg"></i>
                 </button>
-                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Eliminar" onclick="deleteEntity(${e.id})">
+                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Inhabilitar" onclick="deleteEntity(${e.idEntidad})">
                     <i class="bi bi-trash3 text-lg"></i>
                 </button>
             </td>
@@ -155,21 +155,50 @@ window.updateEntitiesTable = function() {
 };
 
 window.deleteEntity = async (id) => {
+    if (!id) {
+        Swal.fire('Error', 'ID de entidad no válido', 'error');
+        return;
+    }
+
     const result = await Swal.fire({
-        title: '¿Eliminar entidad?',
-        text: "Esta acción no se puede deshacer.",
+        title: '¿Inhabilitar entidad?',
+        text: "La entidad pasará a estar en estado Inactivo.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, eliminar',
+        confirmButtonText: 'Sí, inhabilitar',
         cancelButtonText: 'Cancelar',
         customClass: { popup: 'rounded-2xl' }
     });
     
-    if(result.isConfirmed) {
-        await api.deleteEntity(id);
-        renderEntidades(document.getElementById('main-area'));
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch('EntidadesController?action=eliminar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idEntidad: parseInt(id) })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                Swal.fire({
+                    title: '¡Inhabilitada!',
+                    text: 'La entidad se inhabilitó correctamente.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' }
+                });
+                if (typeof window.renderEntidades === 'function') {
+                    window.renderEntidades(document.getElementById('main-area'));
+                }
+            } else {
+                Swal.fire({ title: 'Error', text: data.error || 'No se pudo inhabilitar.', icon: 'error', customClass: { popup: 'rounded-2xl' } });
+            }
+        } catch (e) {
+            Swal.fire({ title: 'Error', text: 'Error de comunicación con el servidor.', icon: 'error', customClass: { popup: 'rounded-2xl' } });
+        }
     }
 };
 
@@ -247,7 +276,8 @@ window.openEntityModal = async(id = null) => {
                         <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-telephone"></i></div>
-                            <input type="tel" id="ent-phone" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.telefono}">
+                            <input type="tel" id="ent-phone" maxlength="9" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.telefono}">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="ent-phone-error"></p>
                         </div>
                     </div>
                     <div>
@@ -255,6 +285,7 @@ window.openEntityModal = async(id = null) => {
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="bi bi-envelope"></i></div>
                             <input type="email" id="ent-email" class="w-full pl-9 rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5" value="${e.email}">
+                            <p class="text-xs text-red-500 mt-1 hidden" id="ent-email-error"></p>
                         </div>
                     </div>
                 </div>
@@ -301,10 +332,51 @@ window.openEntityModal = async(id = null) => {
     docInput.addEventListener('input', validateDoc);
     docTypeSelect.addEventListener('change', validateDoc);
 
+    const phoneInput = document.getElementById('ent-phone');
+    const phoneError = document.getElementById('ent-phone-error');
+
+    function validatePhone() {
+        const v = phoneInput.value.trim();
+        phoneInput.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+        phoneError.classList.add('hidden');
+
+        if (v.length === 0) return true; // el teléfono es opcional
+
+        if (!/^\d{9}$/.test(v)) {
+            phoneError.textContent = 'El teléfono debe tener exactamente 9 dígitos numéricos.';
+            phoneInput.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            phoneError.classList.remove('hidden');
+            return false;
+        }
+        return true;
+    }
+
+    const emailInput = document.getElementById('ent-email');
+    const emailError = document.getElementById('ent-email-error');
+
+    function validateEmail() {
+        const v = emailInput.value.trim();
+        emailInput.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+        emailError.classList.add('hidden');
+
+        if (v.length === 0) return true; // el email es opcional
+
+        const formatoValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        if (!formatoValido) {
+            emailError.textContent = 'Ingrese un correo electrónico con un formato válido.';
+            emailInput.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500');
+            emailError.classList.remove('hidden');
+            return false;
+        }
+        return true;
+    }
+
+    phoneInput.addEventListener('input', validatePhone);
+    emailInput.addEventListener('input', validateEmail);
+
     document.getElementById('ent-form').addEventListener('submit', async ev => {
         ev.preventDefault();
-        if (!validateDoc()) return;
-        
+        if (!validateDoc() || !validatePhone() || !validateEmail()) return;
         const idValue = document.getElementById('ent-id').value;
 
         const entidadDTO = {

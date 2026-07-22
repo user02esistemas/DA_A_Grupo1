@@ -441,6 +441,13 @@ input:disabled, select:disabled, textarea:disabled {
     border: 1px solid #334155 !important;
     border-radius: var(--radius-lg) !important;
 }
+/* SweetAlert2 debe verse SIEMPRE por encima de cualquier modal propio,
+   incluso si se dispara mientras un modal ya está abierto (ej. validaciones). */
+body > .swal2-container,
+.swal2-container.swal2-backdrop-show,
+.swal2-container.swal2-fade {
+    z-index: 99999 !important;
+}
 .swal2-title {
     color: #F8FAFC !important;
 }

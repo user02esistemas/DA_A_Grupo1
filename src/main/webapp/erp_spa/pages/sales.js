@@ -8,25 +8,32 @@
     }
     return new Date(dateStr);
 }
+
+// Arma un texto corto con el/los método(s) de pago de una venta.
+// Si no tiene pagos registrados todavía, se asume que es una venta a crédito.
+function getPaymentMethodLabel(sale) {
+    if (!sale.pagos || sale.pagos.length === 0) return 'Crédito';
+    const metodos = [...new Set(sale.pagos.map(p => p.metodo?.nombre || 'Efectivo'))];
+    return metodos.join(' + ');
+}
+
 async function renderVentas(c) {
     const sales = await api.getSales();
-    const clients = await api.getEntities();
 
     if (!state.salesFilter) {
         state.salesFilter = { search: '', period: 'Todo' };
     }
 
     const filteredSales = sales.filter(s => {
-        const cli = clients.find(x => x.id === s.clientId);
-        const cliName = cli ? cli.name.toLowerCase() : 'cliente mostrador';
-        const matchSearch = s.correlative.toLowerCase().includes(state.salesFilter.search) || 
+        const cliName = (s.cliente?.nombre_RazonSocial || 'cliente mostrador').toLowerCase();
+        const matchSearch = s.serie_correlativa.toLowerCase().includes(state.salesFilter.search) ||
                             cliName.includes(state.salesFilter.search) ||
-                            (s.docType && s.docType.toLowerCase().includes(state.salesFilter.search));
-        
+                            (s.tipo_comprobante && s.tipo_comprobante.toLowerCase().includes(state.salesFilter.search));
+
         let matchPeriod = true;
         const now = new Date();
-        const saleDate = parseSaleDate(s.date);
-        
+        const saleDate = parseSaleDate(s.fecha_emision);
+
         if (state.salesFilter.period === 'Este Mes') {
             matchPeriod = saleDate.getMonth() === now.getMonth() && saleDate.getFullYear() === now.getFullYear();
         } else if (state.salesFilter.period === 'Mes Anterior') {
@@ -40,12 +47,14 @@ async function renderVentas(c) {
         } else if (state.salesFilter.period === 'Este Año') {
             matchPeriod = saleDate.getFullYear() === now.getFullYear();
         }
-        
+
         return matchSearch && matchPeriod;
     });
 
-    const rows = filteredSales.sort((a,b)=>b.id-a.id).map(s => {
-        const cli = clients.find(x => x.id === s.clientId);
+    const rows = filteredSales.sort((a, b) => b.idVenta - a.idVenta).map(s => {
+        const clienteNombre = s.cliente?.nombre_RazonSocial || 'Cliente Mostrador';
+        const estadoVenta = s.estado?.nombreEstado || 'Emitido';
+        const metodoPago = getPaymentMethodLabel(s);
         return `
             <tr class="hover:bg-[#111827]/40 transition-colors border-b border-[#334155] last:border-0 group">
                 <td class="p-4 whitespace-nowrap">
@@ -54,21 +63,21 @@ async function renderVentas(c) {
                             <i class="bi bi-receipt"></i>
                         </div>
                         <div>
-                            <span class="font-bold text-[#F8FAFC]">${s.correlative}</span>
-                            <span class="block text-xs text-[#CBD5E1]">${s.docType || 'Boleta'}</span>
+                            <span class="font-bold text-[#F8FAFC]">${s.serie_correlativa}</span>
+                            <span class="block text-xs text-[#CBD5E1]">${s.tipo_comprobante || 'Boleta'}</span>
                         </div>
                     </div>
                 </td>
                 <td class="p-4 whitespace-nowrap text-[#CBD5E1] font-medium">
-                    <i class="bi bi-calendar3 mr-2 text-slate-500"></i>${s.date}
+                    <i class="bi bi-calendar3 mr-2 text-slate-500"></i>${s.fecha_emision}
                 </td>
                 <td class="p-4">
-                    <span class="font-semibold text-[#F8FAFC]">${cli ? cli.name : 'Cliente Mostrador'}</span>
+                    <span class="font-semibold text-[#F8FAFC]">${clienteNombre}</span>
                 </td>
                 <td class="p-4 whitespace-nowrap text-[#CBD5E1]">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1F2937] border border-[#334155] text-xs font-medium text-[#CBD5E1]">
-                        <i class="bi ${s.paymentMethod.toLowerCase().includes('efectivo') ? 'bi-cash' : 'bi-credit-card'}"></i>
-                        ${s.paymentMethod}
+                        <i class="bi ${metodoPago.toLowerCase().includes('efectivo') ? 'bi-cash' : 'bi-credit-card'}"></i>
+                        ${metodoPago}
                     </span>
                 </td>
                 <td class="p-4 whitespace-nowrap font-black text-[#F8FAFC]">
@@ -76,16 +85,16 @@ async function renderVentas(c) {
                 </td>
                 <td class="p-4 whitespace-nowrap">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold
-                        ${s.status === 'Anulado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
-                        <span class="w-1.5 h-1.5 rounded-full ${s.status === 'Anulado' ? 'bg-red-500' : 'bg-emerald-500'}"></span>
-                        ${s.status || 'Emitido'}
+                        ${estadoVenta === 'Anulado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}">
+                        <span class="w-1.5 h-1.5 rounded-full ${estadoVenta === 'Anulado' ? 'bg-red-500' : 'bg-emerald-500'}"></span>
+                        ${estadoVenta}
                     </span>
                 </td>
                 <td class="p-4 whitespace-nowrap text-right">
-                    <button class="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-600/20 rounded-lg transition-colors tooltip-btn" title="Ver e Imprimir Comprobante" onclick="window.openSaleDetails(${s.id})">
+                    <button class="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-600/20 rounded-lg transition-colors tooltip-btn" title="Ver e Imprimir Comprobante" onclick="window.openSaleDetails(${s.idVenta})">
                         <i class="bi bi-printer text-lg"></i>
                     </button>
-                    <button class="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-600/20 rounded-lg transition-colors tooltip-btn ml-1" title="Ver Detalles" onclick="window.openSaleDetails(${s.id})">
+                    <button class="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-600/20 rounded-lg transition-colors tooltip-btn ml-1" title="Ver Detalles" onclick="window.openSaleDetails(${s.idVenta})">
                         <i class="bi bi-eye text-lg"></i>
                     </button>
                 </td>
@@ -105,7 +114,6 @@ async function renderVentas(c) {
         </div>
 
         <div class="bg-[#1E293B] rounded-2xl shadow-sm border border-[#334155] overflow-hidden" data-aos="fade-up">
-            <!-- Toolbar de Tabla -->
             <div class="p-4 border-b border-[#334155] flex flex-col sm:flex-row gap-4 justify-between bg-[#111827]">
                 <div class="relative max-w-md w-full">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -124,7 +132,6 @@ async function renderVentas(c) {
                 </div>
             </div>
 
-            <!-- Tabla -->
             <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -154,7 +161,6 @@ async function renderVentas(c) {
                 </table>
             </div>
             
-            <!-- Paginación -->
             <div class="p-4 border-t border-[#334155] bg-[#111827] flex items-center justify-between">
                 <span class="text-sm text-[#CBD5E1]">Mostrando <span class="font-semibold text-[#F8FAFC]">${filteredSales.length}</span> resultados</span>
                 <div class="flex gap-1">
@@ -193,9 +199,10 @@ async function renderVentas(c) {
         }
     }, 100);
 }
+
 async function openSaleDetails(saleId) {
     const sales = await api.getSales();
-    const sale = sales.find(s => s.id === saleId);
+    const sale = sales.find(s => s.idVenta === saleId);
     if (!sale) {
         return Swal.fire({
             icon: 'error',
@@ -206,10 +213,9 @@ async function openSaleDetails(saleId) {
         });
     }
 
-    const clients = await api.getEntities();
-    const client = clients.find(c => c.id === sale.clientId);
-    const clientName = client ? client.name : "Cliente Mostrador";
-    const clientDoc = client ? `${client.docType}: ${client.document}` : "";
+    const clientName = sale.cliente?.nombre_RazonSocial || "Cliente Mostrador";
+    const clientDoc = sale.cliente ? `${sale.cliente.tipoDocumento || ''}: ${sale.cliente.numeroDocumento || ''}` : "";
+    const metodoPago = getPaymentMethodLabel(sale);
 
     showModal(`
         <div class="p-8 bg-slate-50 text-slate-800" id="print-area">
@@ -220,9 +226,9 @@ async function openSaleDetails(saleId) {
                     <p class="text-slate-500 text-sm">RUC: 20555555555</p>
                 </div>
                 <div class="text-right border-l-4 border-blue-600 pl-4">
-                    <h3 class="text-lg font-bold uppercase tracking-wider">${sale.docType || 'Boleta'} ELECTRÓNICA</h3>
-                    <p class="text-xl font-bold font-mono text-slate-700 my-1">N° ${sale.correlative}</p>
-                    <p class="text-sm font-semibold text-blue-600">Emisión: ${sale.date}</p>
+                    <h3 class="text-lg font-bold uppercase tracking-wider">${sale.tipo_comprobante || 'Boleta'} ELECTRÓNICA</h3>
+                    <p class="text-xl font-bold font-mono text-slate-700 my-1">N° ${sale.serie_correlativa}</p>
+                    <p class="text-sm font-semibold text-blue-600">Emisión: ${sale.fecha_emision}</p>
                 </div>
             </div>
             
@@ -234,8 +240,8 @@ async function openSaleDetails(saleId) {
                 </div>
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Condiciones de Pago</p>
-                    <p class="font-bold text-slate-800">${sale.paymentMethod}</p>
-                    ${sale.payments && sale.payments.length > 0 ? `<p class="text-slate-600 mt-1 text-xs">Detalle: ${sale.payments.map(p=>`${p.method} (${window.formatMoney(p.amount)})`).join(", ")}</p>` : ""}
+                    <p class="font-bold text-slate-800">${metodoPago}</p>
+                    ${sale.pagos && sale.pagos.length > 0 ? `<p class="text-slate-600 mt-1 text-xs">Detalle: ${sale.pagos.map(p => `${p.metodo?.nombre || 'Efectivo'} (${window.formatMoney(p.monto_total)})`).join(", ")}</p>` : ""}
                 </div>
             </div>
             
@@ -250,17 +256,16 @@ async function openSaleDetails(saleId) {
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    ${sale.items.map(i=>{
-                        const p = i.price || i.product.price;
-                        const base = p * i.quantity;
-                        const itemTotal = window.calcularSubtotalProducto ? window.calcularSubtotalProducto(i) : (base - (i.discount || 0));
-                        const d = base - itemTotal;
+                    ${(sale.detalle || []).map(item => {
+                        const precioUnit = item.precio_unitario || 0;
+                        const descuento = item.descuento_prod || 0;
+                        const itemTotal = item.sub_total != null ? item.sub_total : (precioUnit * item.cantidad) - descuento;
                         return `
                         <tr class="text-sm">
-                            <td class="py-3 font-semibold text-slate-600">${i.quantity}</td>
-                            <td class="py-3 font-bold text-slate-800">${i.product.name}</td>
-                            <td class="py-3 text-right text-slate-600">${window.formatMoney(p)}</td>
-                            <td class="py-3 text-right text-red-500">${d > 0 ? "-" + window.formatMoney(d) : ""}</td>
+                            <td class="py-3 font-semibold text-slate-600">${item.cantidad}</td>
+                            <td class="py-3 font-bold text-slate-800">${item.producto?.nombre_descripcion || ''}</td>
+                            <td class="py-3 text-right text-slate-600">${window.formatMoney(precioUnit)}</td>
+                            <td class="py-3 text-right text-red-500">${descuento > 0 ? "-" + window.formatMoney(descuento) : ""}</td>
                             <td class="py-3 text-right font-bold text-slate-800">${window.formatMoney(itemTotal)}</td>
                         </tr>`;
                     }).join("")}

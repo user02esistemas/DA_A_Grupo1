@@ -1,19 +1,23 @@
 package com.Control;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.DAO.EntidadesDAO;
+import com.DAO.TipoEntidadesDAO;
+import com.DTO.EntidadesDTO;
+import com.DTO.TipoEntidadesDTO;
+import com.google.gson.Gson;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import com.DAO.EntidadesDAO;
-import com.DTO.EntidadesDTO;
-import com.DAO.TipoEntidadesDAO;
-import com.DTO.TipoEntidadesDTO;
-import com.google.gson.Gson;
-
-import java.util.List;
-import java.io.*;
 
 @WebServlet("/EntidadesController")
 public class EntidadesController extends HttpServlet {
@@ -68,9 +72,9 @@ public class EntidadesController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        
         String action = request.getParameter("action");
-
-        if(action ==null){
+        if (action == null || action.trim().isEmpty()) {
             action = "insertar";
         }
 
@@ -79,27 +83,80 @@ public class EntidadesController extends HttpServlet {
             BufferedReader reader = request.getReader();
 
             EntidadesDTO entidad = gson.fromJson(reader, EntidadesDTO.class);
+            Map<String, Object> resultResponse = new HashMap<>();
 
             switch (action) {
                 case "insertar":
+                    if (entidad == null) {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "Datos de entidad vacíos o no válidos.");
+                        return;
+                    }
+                    String errorValidacion = validarEntidad(entidad);
+                    if (errorValidacion != null) {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", errorValidacion);
+                        out.print(gson.toJson(resultResponse));
+                        return;
+                    }
+
                     boolean insertado = entidadesDAO.insertarEntidad(entidad);
-                    
+
+
+
                     if (insertado) {
-                    response.setStatus(HttpServletResponse.SC_OK); // Estado 200
-                    out.print("{\"success\": true, \"message\": \"Entidad registrada con éxito en SQL Server\"}");
+                        resultResponse.put("success", true);
+                        resultResponse.put("message", "Entidad registrada con éxito");
                     } else {
-                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // Estado 500
-                        out.print("{\"success\": false, \"error\": \"Error interno en la base de datos al insertar\"}");
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "Error interno al insertar la entidad");
                     }
                     break;
             
                 case "actualizar":
-                    response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED); // Estado 501
-                    out.print("{\"success\": false, \"error\": \"La función de actualización aún no está implementada\"}");
+                   if (entidad == null) {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "Datos de entidad vacíos o no válidos.");
+                        return;
+                    }
+                    String errorValidacionUpd = validarEntidad(entidad);
+                    if (errorValidacionUpd != null) {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", errorValidacionUpd);
+                        out.print(gson.toJson(resultResponse));
+                        return;
+                    }
+
+                    boolean actualizado = entidadesDAO.actualizarEntidad(entidad);
+                    if (actualizado) {
+                        resultResponse.put("success", true);
+                        resultResponse.put("message", "Entidad actualizada con éxito");
+                    } else {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "Error interno al actualizar la entidad");
+                    }
                     break;
+
+                case "eliminar":
+                    if (entidad == null || entidad.getIdEntidad() <= 0) {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "ID de entidad no válido para inhabilitar");
+                        return;
+                    }
+
+                    boolean eliminado = entidadesDAO.eliminarEntidad(entidad.getIdEntidad());
+                    if (eliminado) {
+                        resultResponse.put("success", true);
+                        resultResponse.put("message", "Entidad inhabilitada/eliminada con éxito");
+                    } else {
+                        resultResponse.put("success", false);
+                        resultResponse.put("error", "Error al inhabilitar la entidad en base de datos");
+                    }
+                    break;
+
                 default:
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // Estado 400
-                    out.print("{\"success\": false, \"error\": \"Acción POST no válida\"}");
+                    resultResponse.put("success", false);
+                    resultResponse.put("error", "Acción POST no válida: " + action);
                     break;
             }
 
@@ -113,6 +170,35 @@ public class EntidadesController extends HttpServlet {
             }
         }
     
+    }
+    
+    private String validarEntidad(EntidadesDTO entidad) {
+        if (entidad.getNumeroDocumento() != null && !entidad.getNumeroDocumento().trim().isEmpty()) {
+            String doc = entidad.getNumeroDocumento().trim();
+            if (!doc.matches("\\d+")) {
+                return "El número de documento solo debe contener dígitos.";
+            }
+            if ("DNI".equals(entidad.getTipoDocumento()) && doc.length() != 8) {
+                return "El DNI debe tener exactamente 8 dígitos.";
+            }
+            if ("RUC".equals(entidad.getTipoDocumento()) && doc.length() != 11) {
+                return "El RUC debe tener exactamente 11 dígitos.";
+            }
+        }
+
+        if (entidad.getTelefono() != null && !entidad.getTelefono().trim().isEmpty()) {
+            if (!entidad.getTelefono().trim().matches("\\d{9}")) {
+                return "El teléfono debe tener exactamente 9 dígitos numéricos.";
+            }
+        }
+
+        if (entidad.getEmail() != null && !entidad.getEmail().trim().isEmpty()) {
+            if (!entidad.getEmail().trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                return "El correo electrónico no tiene un formato válido.";
+            }
+        }
+
+        return null;
     }
 }
 
