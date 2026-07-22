@@ -138,10 +138,10 @@ window.updateEntitiesTable = function() {
                         <i class="bi bi-clock-history text-lg"></i>
                     </button>
                 ` : ''}
-                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.id})">
+                <button class="p-2 text-slate-400 hover:text-[#F8FAFC] hover:bg-[#334155] rounded-lg transition-colors ml-1" title="Editar" onclick="openEntityModal(${e.idEntidad})">
                     <i class="bi bi-pencil-square text-lg"></i>
                 </button>
-                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Eliminar" onclick="deleteEntity(${e.id})">
+                <button class="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1" title="Inhabilitar" onclick="deleteEntity(${e.idEntidad})">
                     <i class="bi bi-trash3 text-lg"></i>
                 </button>
             </td>
@@ -155,21 +155,50 @@ window.updateEntitiesTable = function() {
 };
 
 window.deleteEntity = async (id) => {
+    if (!id) {
+        Swal.fire('Error', 'ID de entidad no válido', 'error');
+        return;
+    }
+
     const result = await Swal.fire({
-        title: '¿Eliminar entidad?',
-        text: "Esta acción no se puede deshacer.",
+        title: '¿Inhabilitar entidad?',
+        text: "La entidad pasará a estar en estado Inactivo.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, eliminar',
+        confirmButtonText: 'Sí, inhabilitar',
         cancelButtonText: 'Cancelar',
         customClass: { popup: 'rounded-2xl' }
     });
     
-    if(result.isConfirmed) {
-        await api.deleteEntity(id);
-        renderEntidades(document.getElementById('main-area'));
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch('EntidadesController?action=eliminar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idEntidad: parseInt(id) })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                Swal.fire({
+                    title: '¡Inhabilitada!',
+                    text: 'La entidad se inhabilitó correctamente.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-2xl' }
+                });
+                if (typeof window.renderEntidades === 'function') {
+                    window.renderEntidades(document.getElementById('main-area'));
+                }
+            } else {
+                Swal.fire({ title: 'Error', text: data.error || 'No se pudo inhabilitar.', icon: 'error', customClass: { popup: 'rounded-2xl' } });
+            }
+        } catch (e) {
+            Swal.fire({ title: 'Error', text: 'Error de comunicación con el servidor.', icon: 'error', customClass: { popup: 'rounded-2xl' } });
+        }
     }
 };
 

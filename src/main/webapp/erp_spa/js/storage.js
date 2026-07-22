@@ -285,8 +285,25 @@
             }
         },
         
-        async deleteEntity(id) {
+       async deleteEntity(id) {
+            try {
+                const response = await fetch('EntidadesController?action=eliminar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idEntidad: id })
+                });
 
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudo eliminar la entidad');
+                }
+
+                state.caches.entities = await this.getEntities(); // Refresh
+                return result;
+            } catch (e) {
+                console.error('Error al eliminar entidad:', e);
+                throw e;
+            }
         },
         
         async saveSale(venta) {
@@ -491,28 +508,15 @@
         async getMovements(productId) {            
             try {
                 const url = productId
-                    ? `InventarioController?action=kardex&idProducto=${encodeURIComponent(productId)}`
+                    ? `InventarioController?action=kardexProductoID&idProducto=${encodeURIComponent(productId)}`
                     : 'InventarioController?action=kardexGlobalHoy';
                 const response = await fetch(url);
 
                 if (!response.ok) {
                     throw new Error(`Error en el servidor: ${response.status}`);
                 }
-
-                const movimientos = await response.json();
-
-                return movimientos.map(m => ({
-                    id: m.idMovimiento,
-                    productId: m.idProducto,
-                    type: (m.idTipoMovimiento === 1 || m.idTipoMovimiento === 3)
-                        ? 'ENTRADA'
-                        : 'SALIDA',
-                    quantity: m.cantidad,
-                    date: m.fecha
-                        ? new Date(m.fecha).toLocaleString('es-PE')
-                        : '-',
-                    reason: m.referencia || '-'
-                }));
+                
+               return await response.json();
             } catch (e) {
                 console.error('Error al obtener movimientos:', e);
                 return [];
