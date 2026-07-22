@@ -1,22 +1,27 @@
 package com.Control;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.DAO.VentaDAO;
+import com.DTO.CuotaDTO;
+import com.DTO.DetalleVentaDTO;
+import com.DTO.MetodosPagoDTO;
+import com.DTO.PagoDTO;
+import com.DTO.VentaDTO;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-import com.DAO.*;
-import com.DTO.*;
-import java.util.*;
-import com.google.gson.Gson;
-
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 
 @WebServlet("/VentaController")
 public class VentaController extends HttpServlet {
