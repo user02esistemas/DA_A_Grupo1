@@ -76,10 +76,6 @@
     `;
 }
 
-// ─── BUG 1 CORREGIDO: openProductModal ahora registra el submit listener
-//     DENTRO del modal, después de inyectar el HTML al DOM.
-// ─── BUG 2 CORREGIDO: la variable `p` ahora es accesible en el listener
-//     porque queda en el mismo closure.
 window.openProductModal = (id = null) => {
     const p = id
         ? state.caches.products.find(x => x.id_producto === id)
@@ -101,6 +97,7 @@ window.openProductModal = (id = null) => {
     if (id && !p) {
         return Swal.fire('Error', 'No se encontró el producto en la caché.', 'error');
     }
+    
 
     const isNew = !id;
     const catName = p.categoria && p.categoria.nombreCategoria ? p.categoria.nombreCategoria : '';
@@ -127,7 +124,7 @@ window.openProductModal = (id = null) => {
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Código Único</label>
-                                    <input type="text" id="p-code" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3 font-mono" value="${p.codigo_unico || ''}" required>
+                                    <input type="text" id="p-code" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3 font-mono" value="${p.codigo_unico || ''}" maxlength="10" required>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Código de Barras</label>
@@ -161,25 +158,25 @@ window.openProductModal = (id = null) => {
                             <div class="grid grid-cols-3 gap-2">
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Minorista</label>
-                                    <input type="number" step="0.01" id="p-price" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_venta || 0}" required>
+                                    <input  type="text" inputmode="decimal" step="0.01" id="p-price" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_venta || 0}" required>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Mayorista</label>
-                                    <input type="number" step="0.01" id="p-price-may" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_mayorista || p.precio_venta || 0}" required>
+                                    <input  type="text" inputmode="decimal" step="0.01" id="p-price-may" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_mayorista || p.precio_venta || 0}" required>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] font-semibold text-slate-600 mb-1">P. Distribuidor</label>
-                                    <input type="number" step="0.01" id="p-price-dist" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_distribuidor || p.precio_venta || 0}" required>
+                                    <input  type="text" inputmode="decimal" step="0.01" id="p-price-dist" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-1.5 px-3" value="${p.precio_distribuidor || p.precio_venta || 0}" required>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Mínimo</label>
-                                    <input type="number" id="p-min" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.stock_minimo || 0}" required>
+                                    <input  type="text" inputmode="numeric" id="p-min" class="w-full rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500 py-2 px-3" value="${p.stock_minimo || 0}" required>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Stock Actual</label>
-                                    <input type="number" id="p-stock" class="w-full rounded-xl border-slate-200 bg-white py-2 px-3 disabled:bg-slate-100 disabled:text-slate-500" value="${p.stock || 0}" ${!isNew ? 'disabled' : ''} ${isNew && p.maneja_lote ? 'disabled' : ''}>
+                                    <input  type="text" inputmode="numeric" id="p-stock" class="w-full rounded-xl border-slate-200 bg-white py-2 px-3 disabled:bg-slate-100 disabled:text-slate-500" value="${p.stock || 0}" ${!isNew ? 'disabled' : ''} ${isNew && p.maneja_lote ? 'disabled' : ''}>
                                     <small id="stock-lote-msg" class="${isNew && p.maneja_lote ? '' : 'hidden'} text-[10px] text-slate-500 mt-1 block">Gestionado por lotes/compras</small>
                                 </div>
                             </div>
@@ -219,7 +216,7 @@ window.openProductModal = (id = null) => {
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Stock Inicial Lote</label>
-                                        <input type="number" id="l-stock" class="w-full rounded-lg border-blue-200 bg-white py-1 text-xs px-2 font-bold text-center" value="0" min="0" onchange="document.getElementById('p-stock').value = this.value">
+                                        <input  type="text" inputmode="numeric" id="l-stock" class="w-full rounded-lg border-blue-200 bg-white py-1 text-xs px-2 font-bold text-center" value="0" min="0" onchange="document.getElementById('p-stock').value = this.value">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Fecha Entrada Lote</label>
@@ -271,6 +268,31 @@ window.openProductModal = (id = null) => {
             </form>
         </div>
     `, 'max-w-4xl');
+    function sanitizeIntegerInput(input) {
+        input.value = input.value.replace(/[^\d]/g, '');
+    }
+
+    function sanitizeDecimalInput(input) {
+        let v = input.value.replace(/[^\d.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+        input.value = v;
+    }
+
+    ['p-price', 'p-price-may', 'p-price-dist'].forEach(id => {
+        const input = document.getElementById(id);
+        input.addEventListener('input', () => sanitizeDecimalInput(input));
+    });
+
+    ['p-min', 'p-stock', 'l-stock'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', () => sanitizeIntegerInput(input));
+    });
+
+    const pCodeInput = document.getElementById('p-code');
+    pCodeInput.addEventListener('input', () => {
+        pCodeInput.value = pCodeInput.value.replace(/\D/g, '').slice(0, 10);
+    });
 
     // ─── Controladores visuales dinámicos ───────────────────────────────────
     window.toggleLoteSection = () => {
@@ -308,6 +330,7 @@ window.openProductModal = (id = null) => {
             stockMsg.classList.add('hidden');
         }
     };
+
 
     // ─── Drag & Drop Image ──────────────────────────────────────────────────
     const imgDz   = document.getElementById('img-drop-zone');
@@ -364,9 +387,6 @@ window.openProductModal = (id = null) => {
         pdfData.value = file.name;
     }
 
-    // ─── BUG 1+2 CORREGIDO: el listener del form va AQUÍ, dentro de
-    //     openProductModal, después de que el HTML ya fue inyectado al DOM.
-    //     `p` e `isNew` están accesibles porque comparten el mismo closure.
     document.getElementById('prod-form').addEventListener('submit', async ev => {
         ev.preventDefault();
 
@@ -377,7 +397,6 @@ window.openProductModal = (id = null) => {
 
         let initialStock = 0;
         if (!isNewP && !manejaLote) initialStock = parseInt(document.getElementById('p-stock').value) || 0;
-        // ─── BUG 2 CORREGIDO: `p` ahora existe en este scope ───────────────
         if (!isNewP && manejaLote) initialStock = p.stock;
 
         if (isNewP && manejaLote) {
@@ -432,9 +451,9 @@ window.openProductModal = (id = null) => {
 
         try {
             await api.saveProduct(prod, newLote);
-            Swal.fire('¡Éxito!', 'Producto registrado en la Base de Datos', 'success');
             closeModal();
             renderInventario(document.getElementById('main-area'));
+            await Swal.fire('¡Éxito!', 'Producto registrado en la Base de Datos', 'success');
         } catch (error) {
             Swal.fire('Error del Servidor', error.message || 'No se pudo guardar el producto', 'error');
         }
@@ -650,7 +669,7 @@ window.renderLotesModalContent = async () => {
                     <div>
                         <label class="block text-[10px] text-slate-600 mb-1">Stock Inicial</label>
                         <div class="flex gap-2">
-                            <input type="number" id="nl-stock" class="w-full rounded-xl border-slate-200 bg-white py-1.5 text-xs font-bold text-center" min="1" value="10">
+                            <input type="text" inputmode="numeric" id="nl-stock" class="w-full rounded-xl border-slate-200 bg-white py-1.5 text-xs font-bold text-center" min="1" value="10">
                             <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 rounded-xl transition-all whitespace-nowrap" onclick="addNewLote()">
                                 + Añadir
                             </button>
@@ -678,6 +697,12 @@ window.renderLotesModalContent = async () => {
             </div>
         </div>
     `;
+    const nlStockInput = document.getElementById('nl-stock');
+    if (nlStockInput) {
+        nlStockInput.addEventListener('input', () => {
+            nlStockInput.value = nlStockInput.value.replace(/[^\d]/g, '');
+        });
+    }
 
     if (!document.getElementById('lotes-modal-container')) {
         showModal(`<div id="lotes-modal-container">${html}</div>`, 'max-w-3xl');

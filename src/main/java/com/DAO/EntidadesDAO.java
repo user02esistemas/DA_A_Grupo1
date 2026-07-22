@@ -56,12 +56,12 @@ public class EntidadesDAO {
                 En.direccion,
                 En.email,
                 En.telefono,
-                Est.nombre AS ESTADO
+                Est.nombre AS ESTADO,
+                En.id_tipo_entidad
             FROM entidades AS En
             INNER JOIN estados_sistema AS Est
                 ON En.id_estado = Est.id_estado
-            INNER JOIN tipos_entidad AS Ten
-                ON En.id_tipo_entidad = Ten.id_tipo_entidad
+            INNER JOIN tipos_entidad AS Ten ON En.id_tipo_entidad = Ten.id_tipo_entidad
             """;
 
         try{
@@ -78,6 +78,7 @@ public class EntidadesDAO {
                 entidad.setEmail((String) fila[6]);
                 entidad.setTelefono((String) fila[7]);
                 entidad.setNombreEstado((String) fila[8]);
+                entidad.setIdTipoEntidad(((Number) fila[9]).intValue());
                 entidadesList.add(entidad);
             }
         } catch (Exception e) {

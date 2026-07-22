@@ -42,11 +42,6 @@ function setupCombo(id, items, onSelect) {
 
     input.addEventListener('focus', () => renderList(input.value));
     input.addEventListener('input', () => {
-
-        // Cualquier edición de texto invalida el id seleccionado, para
-        // evitar que se guarde un id "viejo" que ya no corresponde al
-        // texto visible (bug que tenía la versión anterior).
-
         hidden.value = '';
         renderList(input.value);
     });
@@ -94,6 +89,19 @@ function kpiCard(label, value, valueClass) {
             <span class="text-2xl font-black ${valueClass || 'text-[#F8FAFC]'}">${value}</span>
         </div>
     `;
+}
+
+function sanitizeIntegerInput(input) {
+    input.value = input.value.replace(/[^\d]/g, '');
+}
+
+function sanitizeDecimalInput(input) {
+    let v = input.value.replace(/[^\d.]/g, '');
+    const parts = v.split('.');
+    if (parts.length > 2) {
+        v = parts[0] + '.' + parts.slice(1).join('');
+    }
+    input.value = v;
 }
 
 function isThisMonth(d) {
@@ -204,7 +212,7 @@ window.openCompraModal = () => {
                         <div class="md:col-span-2">
                             <label class="block text-sm font-semibold text-slate-700 mb-1">Costo U. Real</label>
                             <div class="flex gap-2">
-                                <input type="number" id="c-cost" class="w-full rounded-xl border-slate-200 bg-white py-2.5 outline-none px-3" step="0.01" placeholder="0.00">
+                               <input type="text" inputmode="decimal" id="c-cost" class="w-full rounded-xl border-slate-200 bg-white py-2.5 outline-none px-3" placeholder="0.00">
                                 <button type="button" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap" onclick="window.addCompraItemModal()">
                                     <i class="bi bi-plus-lg"></i>
                                 </button>
@@ -245,6 +253,24 @@ window.openCompraModal = () => {
     const cLoteContainer = document.getElementById('c-lote-container');
     const cLoteInput = document.getElementById('c-lote');
     const cCostInput = document.getElementById('c-cost');
+
+    const cCantInput = document.getElementById('c-cant');
+
+    function sanitizeIntegerInput(input) {
+        input.value = input.value.replace(/[^\d]/g, '');
+    }
+
+    function sanitizeDecimalInput(input) {
+        let v = input.value.replace(/[^\d.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) {
+            v = parts[0] + '.' + parts.slice(1).join('');
+        }
+        input.value = v;
+    }
+
+    cCantInput.addEventListener('input', () => sanitizeIntegerInput(cCantInput));
+    cCostInput.addEventListener('input', () => sanitizeDecimalInput(cCostInput));
 
 
     setupCombo('c-order-link', window.comprasContext?.ocItems || [], () => window.linkOCModal());
@@ -480,7 +506,7 @@ window.openOCModal = () => {
                         <div class="md:col-span-2">
                             <label class="block text-xs text-slate-500 mb-1">Costo Est.</label>
                             <div class="flex gap-2">
-                                <input type="number" id="oc-cost" class="w-full rounded-xl border-slate-200 bg-white py-2.5 px-3" step="0.01" placeholder="0.00">
+                                <input type="text" inputmode="decimal" id="oc-cost" class="w-full rounded-xl border-slate-200 bg-white py-2.5 px-3" placeholder="0.00">
                                 <button type="button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl transition-all font-bold" onclick="window.addProductoOc()">
                                     <i class="bi bi-plus-lg"></i>
                                 </button>
@@ -522,6 +548,12 @@ window.openOCModal = () => {
         document.getElementById('oc-cost').value = '';
         document.getElementById('oc-cost').focus();
     });
+
+    const ocCantInput = document.getElementById('oc-cant');
+    const ocCostInput = document.getElementById('oc-cost');
+
+    ocCantInput.addEventListener('input', () => sanitizeIntegerInput(ocCantInput));
+    ocCostInput.addEventListener('input', () => sanitizeDecimalInput(ocCostInput));
 
     window.addProductoOc = () => {
         const item = window.productoSeleccionado;

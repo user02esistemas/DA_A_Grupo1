@@ -1,3 +1,13 @@
+window.sanitizeNumericField = function(input, mode) {
+    if (mode === 'integer') {
+        input.value = input.value.replace(/[^\d]/g, '');
+    } else { // decimal
+        let v = input.value.replace(/[^\d.]/g, '');
+        const parts = v.split('.');
+        if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+        input.value = v;
+    }
+};
 
 function posNewSale() {
     state.cart = [];
@@ -194,6 +204,7 @@ async function renderPOS(c) {
                             <span>Descuento Global</span>
                             <div class="flex items-center bg-[#1F2937] rounded-lg p-0.5 border border-[#334155]">
                                 <input type="number" id="pos-desc" value="${state.globalDiscount}" min="0"
+                                 oninput="window.sanitizeNumericField(this, 'decimal')"
                                     class="w-16 bg-transparent border-none text-right py-1 text-sm font-semibold text-[#F8FAFC] focus:ring-0">
                                 <select id="pos-desc-type" onchange="updGlobalDiscountType(this.value)"
                                     class="bg-transparent border-none py-1 pl-1 pr-6 text-sm font-bold text-blue-400 focus:ring-0 appearance-none cursor-pointer">
@@ -562,6 +573,7 @@ function updateCartUI() {
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Desc:</span>
                     <div class="flex items-center bg-[#1F2937] rounded text-xs border border-[#334155] flex-1">
                         <input type="number" value="${i.discount}" min="0" step="1"
+                                oninput="window.sanitizeNumericField(this, 'decimal')"
                                onchange="aplicarDescuentoProducto(${i.product.id_producto}, this.value, null)"
                                class="w-full bg-transparent border-none text-right py-0.5 text-[#F8FAFC] font-medium focus:ring-0">
                         <select onchange="aplicarDescuentoProducto(${i.product.id_producto}, null, this.value)"
@@ -658,6 +670,7 @@ async function addPaymentModal() {
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Monto (S/)</label>
                     <input type="number" id="pay-amount"
+                        oninput="window.sanitizeNumericField(this, 'decimal')"
                         class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5 font-bold text-lg text-blue-600"
                         value="${pending.toFixed(2)}" step="0.01" min="0.01">
                 </div>
@@ -713,6 +726,7 @@ function openInstallmentsModal() {
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">Número de Cuotas</label>
                     <input type="number" id="inst-count"
+                        oninput="window.sanitizeNumericField(this, 'integer')"
                         class="w-full rounded-xl border-slate-200 bg-slate-50 focus:border-blue-500 focus:ring-blue-500 py-2.5"
                         value="1" min="1">
                 </div>
@@ -778,6 +792,7 @@ function generateInstallments() {
                     </td>
                     <td class="p-2 text-right">
                         <input type="number" value="${x.amount.toFixed(2)}" step="0.01"
+                                oninput="window.sanitizeNumericField(this, 'decimal')"
                                onchange="state.posInstallments[${i}].amount = parseFloat(this.value)"
                                class="text-sm rounded border-slate-200 py-1 px-2 text-right w-24 focus:ring-blue-500 focus:border-blue-500 font-bold text-slate-700">
                     </td>

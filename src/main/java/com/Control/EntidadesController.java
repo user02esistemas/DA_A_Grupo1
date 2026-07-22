@@ -90,14 +90,14 @@ public class EntidadesController extends HttpServlet {
                     if (entidad == null) {
                         resultResponse.put("success", false);
                         resultResponse.put("error", "Datos de entidad vacíos o no válidos.");
-                        return;
+                        break;
                     }
                     String errorValidacion = validarEntidad(entidad);
                     if (errorValidacion != null) {
                         resultResponse.put("success", false);
                         resultResponse.put("error", errorValidacion);
                         out.print(gson.toJson(resultResponse));
-                        return;
+                        break;
                     }
 
                     boolean insertado = entidadesDAO.insertarEntidad(entidad);
@@ -108,23 +108,25 @@ public class EntidadesController extends HttpServlet {
                         resultResponse.put("success", true);
                         resultResponse.put("message", "Entidad registrada con éxito");
                     } else {
+                        response.setStatus(HttpServletResponse.SC_CONFLICT);
                         resultResponse.put("success", false);
                         resultResponse.put("error", "Error interno al insertar la entidad");
                     }
                     break;
             
                 case "actualizar":
-                   if (entidad == null) {
+                    if (entidad == null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         resultResponse.put("success", false);
                         resultResponse.put("error", "Datos de entidad vacíos o no válidos.");
-                        return;
+                        break;
                     }
                     String errorValidacionUpd = validarEntidad(entidad);
                     if (errorValidacionUpd != null) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         resultResponse.put("success", false);
                         resultResponse.put("error", errorValidacionUpd);
-                        out.print(gson.toJson(resultResponse));
-                        return;
+                        break;
                     }
 
                     boolean actualizado = entidadesDAO.actualizarEntidad(entidad);
@@ -132,16 +134,18 @@ public class EntidadesController extends HttpServlet {
                         resultResponse.put("success", true);
                         resultResponse.put("message", "Entidad actualizada con éxito");
                     } else {
+                        response.setStatus(HttpServletResponse.SC_CONFLICT);
                         resultResponse.put("success", false);
-                        resultResponse.put("error", "Error interno al actualizar la entidad");
+                        resultResponse.put("error", "Ya existe una entidad registrada con ese número de documento.");
                     }
                     break;
 
                 case "eliminar":
-                    if (entidad == null || entidad.getIdEntidad() <= 0) {
+                    if (entidad == null || entidad.getIdEntidad() == null || entidad.getIdEntidad() <= 0) {
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         resultResponse.put("success", false);
                         resultResponse.put("error", "ID de entidad no válido para inhabilitar");
-                        return;
+                        break;
                     }
 
                     boolean eliminado = entidadesDAO.eliminarEntidad(entidad.getIdEntidad());
@@ -149,16 +153,20 @@ public class EntidadesController extends HttpServlet {
                         resultResponse.put("success", true);
                         resultResponse.put("message", "Entidad inhabilitada/eliminada con éxito");
                     } else {
+                        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                         resultResponse.put("success", false);
                         resultResponse.put("error", "Error al inhabilitar la entidad en base de datos");
                     }
                     break;
 
                 default:
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     resultResponse.put("success", false);
                     resultResponse.put("error", "Acción POST no válida: " + action);
                     break;
             }
+            
+        out.print(gson.toJson(resultResponse));
 
         }catch (Exception e) {
             e.printStackTrace();

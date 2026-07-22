@@ -1,10 +1,10 @@
 ﻿const ROUTES = {
     'dashboard': { title: 'Dashboard', icon: 'bi-pie-chart-fill', render: 'renderDashboard', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
     'pos': { title: 'Punto de Venta', icon: 'bi-cash-register', render: 'renderPOS', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
-    'sales': { title: 'Historial Ventas', icon: 'bi-receipt', render: 'renderVentas', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
+    //'sales': { title: 'Historial Ventas', icon: 'bi-receipt', render: 'renderVentas', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
     'inventory': { title: 'Inventario', icon: 'bi-box-seam', render: 'renderInventario', roles: ['ADMINISTRADOR'] },
     'purchases': { title: 'Compras', icon: 'bi-cart-check', render: 'renderCompras', roles: ['ADMINISTRADOR'] },
-    'accounting': { title: 'Contabilidad', icon: 'bi-calculator', render: 'renderContabilidad', roles: ['ADMINISTRADOR'] },
+    //'accounting': { title: 'Contabilidad', icon: 'bi-calculator', render: 'renderContabilidad', roles: ['ADMINISTRADOR'] },
     'installments': { title: 'Cuotas y Pagos', icon: 'bi-journal-check', render: 'renderInstallments', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
     'entities': { title: 'Entidades', icon: 'bi-people-fill', render: 'renderEntidades', roles: ['ADMINISTRADOR', 'VENDEDOR'] },
     'movements': { title: 'Movimientos Inv.', icon: 'bi-arrow-left-right', render: 'renderMovimientos', roles: ['ADMINISTRADOR'] },
